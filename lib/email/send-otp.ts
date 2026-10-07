@@ -7,8 +7,8 @@ import { recordEmailOtp } from "@/lib/email/recording-store";
 
 function authEmailContent(otp: string): { subject: string; text: string } {
   return {
-    subject: "Код входа — Ночная лига",
-    text: `Код для входа на портал: ${otp}\n\nЕсли вы не запрашивали код, проигнорируйте это письмо.`,
+    subject: "Код входа в Ночную Лигу",
+    text: `Ваш персональный код: ${otp}\n\nЕсли вы не запрашивали код, проигнорируйте это письмо.`,
   };
 }
 
