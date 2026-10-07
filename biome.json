@@ -14,7 +14,8 @@
       "!dist",
       "!build",
       "!lib/db/schema/auth-schema.ts",
-      "!drizzle"
+      "!drizzle",
+      "!public/telegram-web-app.js"
     ]
   },
   "formatter": {

@@ -48,14 +48,10 @@ export function signTelegramInitDataForTest(
   return parts.join("&");
 }
 
-export function verifyTelegramInitData(
-  initData: string,
-  botToken?: string,
+function verifyParsedFields(
+  fields: Map<string, string>,
+  token: string,
 ): VerifiedTelegramInitData | null {
-  const token = botToken ?? getTelegramBotToken();
-  if (!token?.trim() || !initData?.trim()) return null;
-
-  const fields = parseInitDataQuery(initData);
   const receivedHash = fields.get("hash");
   if (!receivedHash || !/^[a-f0-9]{64}$/i.test(receivedHash)) return null;
 
@@ -87,4 +83,23 @@ export function verifyTelegramInitData(
     authDate,
     startParam: startParam || undefined,
   };
+}
+
+export function verifyTelegramInitData(
+  initData: string,
+  botToken?: string,
+): VerifiedTelegramInitData | null {
+  const token = botToken ?? getTelegramBotToken();
+  if (!token?.trim() || !initData?.trim()) return null;
+
+  const fields = parseInitDataQuery(initData);
+  const verified = verifyParsedFields(fields, token);
+  if (verified) return verified;
+
+  // Newer clients add `signature` (Ed25519, third-party check). Some of them
+  // do not include that field in the bot-token HMAC. Retry without it.
+  if (!fields.has("signature")) return null;
+  const withoutSignature = new Map(fields);
+  withoutSignature.delete("signature");
+  return verifyParsedFields(withoutSignature, token);
 }

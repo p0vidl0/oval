@@ -1,25 +1,24 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Script from "next/script";
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { authErrorText } from "@/lib/auth/auth-error-text";
 import { authClient } from "@/lib/auth/client";
 import {
   TelegramMiniAppContext,
   type TelegramMiniAppContextValue,
 } from "@/lib/telegram/mini-app-context";
-import { resolveStartParamRoute } from "@/lib/telegram/mini-app-start-param";
+import {
+  launchPathForStartParam,
+  readTelegramLaunchSnapshot,
+  TELEGRAM_LAUNCH_HASH_KEY,
+  TELEGRAM_LAUNCH_INIT_DATA_KEY,
+  TELEGRAM_WEB_APP_SDK_SRC,
+  type TelegramLaunchSnapshot,
+} from "@/lib/telegram/mini-app-launch";
 
-const TG_SCRIPT = "https://telegram.org/js/telegram-web-app.js";
-const START_PARAM_STORAGE_PREFIX = "tg-start-param:";
+const BOOT_WAIT_MS = 2500;
+const BOOT_INTERVAL_MS = 100;
 
 function applyTelegramTheme(webApp: TelegramWebApp): void {
   const root = document.documentElement;
@@ -32,44 +31,65 @@ function applyTelegramTheme(webApp: TelegramWebApp): void {
   }
 }
 
-function startParamHandled(param: string): boolean {
+function readStorage(key: string): string {
   try {
-    return (
-      sessionStorage.getItem(`${START_PARAM_STORAGE_PREFIX}${param}`) === "1"
-    );
+    return sessionStorage.getItem(key) ?? "";
   } catch {
-    return false;
+    return "";
   }
 }
 
-function markStartParamHandled(param: string): void {
+function rememberLiveHash(): void {
+  const live = window.location.hash;
+  if (!live.includes("tgWebApp")) return;
   try {
-    sessionStorage.setItem(`${START_PARAM_STORAGE_PREFIX}${param}`, "1");
+    sessionStorage.setItem(TELEGRAM_LAUNCH_HASH_KEY, live);
+    const initData = readTelegramLaunchSnapshot({
+      liveHash: live,
+      storedHash: "",
+      storedInitData: "",
+      search: "",
+    }).initData;
+    if (initData) {
+      sessionStorage.setItem(TELEGRAM_LAUNCH_INIT_DATA_KEY, initData);
+    }
   } catch {
     /* ignore */
   }
 }
 
-function shouldApplyStartParam(next: string | null): boolean {
-  if (!next) return true;
-  return next === "/cabinet";
-}
-
-function isLikelyTelegramWebView(): boolean {
-  if (typeof window === "undefined") return false;
+function readLaunch(): TelegramLaunchSnapshot {
   const webApp = window.Telegram?.WebApp;
-  if (!webApp) return false;
-  return webApp.platform !== "unknown" || Boolean(webApp.initData?.trim());
+  return readTelegramLaunchSnapshot({
+    liveHash: window.location.hash,
+    storedHash: readStorage(TELEGRAM_LAUNCH_HASH_KEY),
+    storedInitData: readStorage(TELEGRAM_LAUNCH_INIT_DATA_KEY),
+    search: window.location.search,
+    sdkInitData: webApp?.initData,
+    sdkPlatform: webApp?.platform,
+    sdkStartParam: webApp?.initDataUnsafe?.start_param,
+  });
 }
 
-async function readInitData(webApp: TelegramWebApp): Promise<string> {
-  webApp.ready();
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    const data = webApp.initData?.trim();
-    if (data) return data;
-    await new Promise((r) => setTimeout(r, 50 * (attempt + 1)));
+function isFreshDocumentNavigation(): boolean {
+  try {
+    const nav = performance.getEntriesByType("navigation")[0] as
+      | PerformanceNavigationTiming
+      | undefined;
+    return !nav || nav.type === "navigate";
+  } catch {
+    return true;
   }
-  return webApp.initData?.trim() ?? "";
+}
+
+function ensureTelegramSdk(): void {
+  if (document.querySelector(`script[src="${TELEGRAM_WEB_APP_SDK_SRC}"]`)) {
+    return;
+  }
+  const script = document.createElement("script");
+  script.src = TELEGRAM_WEB_APP_SDK_SRC;
+  script.async = false;
+  document.head.appendChild(script);
 }
 
 export function TelegramMiniAppProvider({ children }: { children: ReactNode }) {
@@ -78,89 +98,167 @@ export function TelegramMiniAppProvider({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
   const nextParam = searchParams.get("next");
 
-  const [sdkHint, setSdkHint] = useState(false);
+  const routerRef = useRef(router);
+  routerRef.current = router;
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
+  const nextRef = useRef(nextParam);
+  nextRef.current = nextParam;
+
   const [isMiniApp, setIsMiniApp] = useState(false);
   const [authPending, setAuthPending] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const bootstrappedRef = useRef(false);
+  const doneRef = useRef(false);
+  const lastStartRef = useRef<string | null>(null);
 
-  const tryBootstrap = useCallback(async () => {
-    if (bootstrappedRef.current) return;
-    if (!isLikelyTelegramWebView()) {
-      if (sdkHint) bootstrappedRef.current = true;
-      return;
+  useEffect(() => {
+    let cancelled = false;
+    let activatedHandler: (() => void) | null = null;
+    let activatedWebApp: TelegramWebApp | null = null;
+    const started = Date.now();
+
+    function persistInitData(initData: string): void {
+      if (!initData) return;
+      try {
+        sessionStorage.setItem(TELEGRAM_LAUNCH_INIT_DATA_KEY, initData);
+      } catch {
+        /* ignore */
+      }
     }
 
-    const webApp = window.Telegram?.WebApp;
-    if (!webApp) return;
-
-    bootstrappedRef.current = true;
-    setIsMiniApp(true);
-    document.documentElement.classList.add("tg-mini-app");
-
-    webApp.expand();
-    applyTelegramTheme(webApp);
-
-    const initData = await readInitData(webApp);
-    if (!initData) {
-      setAuthError(
-        "Telegram не передал данные для входа. Закройте Mini App и откройте снова.",
-      );
-      return;
+    function openStartParam(startParam: string | null): boolean {
+      const path = launchPathForStartParam(startParam);
+      if (!path || path === window.location.pathname) return false;
+      lastStartRef.current = startParam;
+      window.location.replace(path);
+      return true;
     }
 
-    setAuthPending(true);
-    setAuthError(null);
-    try {
-      let session = await authClient.getSession();
-      if (!session.data?.session) {
-        const res = await authClient.$fetch("/sign-in/telegram/mini-app", {
-          method: "POST",
-          body: { initData },
-        });
-        if (res.error) {
-          setAuthError(
-            authErrorText(
-              res.error,
-              "Не удалось войти через Telegram. Проверьте TELEGRAM_BOT_TOKEN на сервере.",
-            ),
-          );
+    function resumeFromNewLaunch(): void {
+      rememberLiveHash();
+      const launch = readLaunch();
+      const start = launch.startParam;
+      if (!start || start === lastStartRef.current) return;
+      persistInitData(launch.initData);
+      openStartParam(start);
+    }
+
+    function bindActivated(webApp: TelegramWebApp | undefined): void {
+      if (!webApp?.onEvent || activatedHandler) return;
+      activatedHandler = () => {
+        if (!cancelled) resumeFromNewLaunch();
+      };
+      activatedWebApp = webApp;
+      webApp.onEvent("activated", activatedHandler);
+    }
+
+    async function signIn(initData: string): Promise<void> {
+      setAuthPending(true);
+      setAuthError(null);
+      try {
+        let session = await authClient.getSession();
+        if (cancelled) return;
+        if (!session.data?.session) {
+          if (!initData) {
+            setAuthError(
+              "Telegram не передал данные для входа. Закройте Mini App и откройте снова.",
+            );
+            return;
+          }
+          const res = await authClient.$fetch("/sign-in/telegram/mini-app", {
+            method: "POST",
+            body: { initData },
+          });
+          if (cancelled) return;
+          if (res.error) {
+            setAuthError(
+              authErrorText(
+                res.error,
+                "Не удалось войти через Telegram. Проверьте TELEGRAM_BOT_TOKEN на сервере.",
+              ),
+            );
+            return;
+          }
+          session = await authClient.getSession();
+        }
+        if (cancelled || !session.data?.session) return;
+
+        const next = nextRef.current;
+        if (pathnameRef.current === "/login" && next?.startsWith("/")) {
+          window.location.replace(next);
           return;
         }
-        session = await authClient.getSession();
+        routerRef.current.refresh();
+      } finally {
+        if (!cancelled) setAuthPending(false);
       }
+    }
 
-      router.refresh();
-
-      if (pathname === "/login" && nextParam?.startsWith("/")) {
-        router.replace(nextParam);
+    async function attempt(finalAttempt: boolean): Promise<void> {
+      if (cancelled || doneRef.current) return;
+      rememberLiveHash();
+      const launch = readLaunch();
+      if (!launch.isTelegram) {
+        if (finalAttempt) doneRef.current = true;
         return;
       }
 
-      const startParam = webApp.initDataUnsafe.start_param;
-      if (
-        startParam &&
-        shouldApplyStartParam(nextParam) &&
-        !startParamHandled(startParam)
-      ) {
-        const route = resolveStartParamRoute(startParam);
-        if (route) {
-          markStartParamHandled(startParam);
-          router.replace(route.path);
-        }
+      setIsMiniApp(true);
+      document.documentElement.classList.add("tg-mini-app");
+      ensureTelegramSdk();
+      const webApp = window.Telegram?.WebApp;
+      webApp?.ready();
+      webApp?.expand();
+      if (webApp) applyTelegramTheme(webApp);
+      bindActivated(webApp);
+
+      const start =
+        launch.startParam ??
+        (finalAttempt && isFreshDocumentNavigation()
+          ? launch.storedStartParam
+          : null);
+      const path = launchPathForStartParam(start);
+      if (path && path !== window.location.pathname) {
+        if (!launch.initData && !finalAttempt) return;
+        persistInitData(launch.initData);
+        doneRef.current = true;
+        lastStartRef.current = start;
+        window.location.replace(path);
+        return;
       }
-    } finally {
-      setAuthPending(false);
+
+      if (!launch.initData && !finalAttempt) return;
+
+      doneRef.current = true;
+      lastStartRef.current = start ?? launch.storedStartParam;
+      await signIn(launch.initData);
     }
-  }, [sdkHint, pathname, nextParam, router]);
 
-  useEffect(() => {
-    void tryBootstrap();
-  }, [tryBootstrap]);
+    void attempt(false);
+    const timer = window.setInterval(() => {
+      if (Date.now() - started >= BOOT_WAIT_MS) {
+        window.clearInterval(timer);
+        void attempt(true);
+        return;
+      }
+      void attempt(false);
+    }, BOOT_INTERVAL_MS);
 
-  useEffect(() => {
-    if (sdkHint) void tryBootstrap();
-  }, [sdkHint, tryBootstrap]);
+    function onHashChange(): void {
+      if (doneRef.current) resumeFromNewLaunch();
+      else void attempt(false);
+    }
+    window.addEventListener("hashchange", onHashChange);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("hashchange", onHashChange);
+      if (activatedHandler && activatedWebApp?.offEvent) {
+        activatedWebApp.offEvent("activated", activatedHandler);
+      }
+    };
+  }, []);
 
   const contextValue = useMemo<TelegramMiniAppContextValue>(
     () => ({
@@ -173,11 +271,6 @@ export function TelegramMiniAppProvider({ children }: { children: ReactNode }) {
 
   return (
     <TelegramMiniAppContext.Provider value={contextValue}>
-      <Script
-        src={TG_SCRIPT}
-        strategy="afterInteractive"
-        onReady={() => setSdkHint(true)}
-      />
       {isMiniApp && authError ? (
         <div
           className="nl-mini-app-auth-error"

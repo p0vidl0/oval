@@ -35,6 +35,8 @@ interface TelegramWebApp {
   ready: () => void;
   expand: () => void;
   close: () => void;
+  onEvent?: (eventType: string, eventHandler: () => void) => void;
+  offEvent?: (eventType: string, eventHandler: () => void) => void;
 }
 
 interface Telegram {

@@ -54,6 +54,16 @@ describe("verifyTelegramInitData", () => {
     const verified = verifyTelegramInitData(initData, BOT_TOKEN);
     expect(verified?.startParam).toBe("p_abc123");
   });
+
+  it("accepts a hash that includes the signature field", () => {
+    const initData = validInitData({ signature: "ed25519-stub" });
+    expect(verifyTelegramInitData(initData, BOT_TOKEN)?.profile.id).toBe(42);
+  });
+
+  it("accepts a hash that omits the signature field", () => {
+    const initData = `${validInitData()}&signature=ed25519-stub`;
+    expect(verifyTelegramInitData(initData, BOT_TOKEN)?.profile.id).toBe(42);
+  });
 });
 
 describe("parseTelegramInitDataUserJson", () => {
