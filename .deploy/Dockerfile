@@ -12,11 +12,10 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 
 FROM deps AS builder
-
+ARG SERVER_ACTION_BODY_SIZE_LIMIT
+ENV SERVER_ACTION_BODY_SIZE_LIMIT=${SERVER_ACTION_BODY_SIZE_LIMIT}
 COPY . .
-
 ENV NEXT_TELEMETRY_DISABLED=1
-
 RUN pnpm run build
 
 FROM node:${NODE_VERSION}-bookworm-slim AS runner

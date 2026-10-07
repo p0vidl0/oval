@@ -1,14 +1,16 @@
 import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+  MAX_IMAGES_PER_POST,
+  MAX_UPLOAD_BYTES,
+} from "@/lib/config/upload-limits";
+
+export { MAX_IMAGES_PER_POST, MAX_UPLOAD_BYTES };
 
 const UPLOAD_ROOT = path.join(process.cwd(), "data", "uploads");
 
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
-
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
-/** Верхняя граница для любого типа (см. `maxImagesForPostType`). */
-export const MAX_IMAGES_PER_POST = 10;
 
 export function uploadPublicUrl(storageKey: string): string {
   return `/uploads/${storageKey}`;
