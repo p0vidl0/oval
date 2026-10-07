@@ -101,6 +101,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_BOT_USERNAME: ${{ secrets.TELEGRAM_BOT_USERNAME }}
           TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          TELEGRAM_API_ROOT: ${{ secrets.TELEGRAM_API_ROOT }}
         run: |
           set -euo pipefail
           REMOTE_DIR="${SSH_PATH%/}"
@@ -116,6 +117,7 @@ jobs:
             [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && echo "TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}"
             [ -n "${TELEGRAM_BOT_USERNAME:-}" ] && echo "TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME}"
             [ -n "${TELEGRAM_WEBHOOK_SECRET:-}" ] && echo "TELEGRAM_WEBHOOK_SECRET=${TELEGRAM_WEBHOOK_SECRET}"
+            [ -n "${TELEGRAM_API_ROOT:-}" ] && echo "TELEGRAM_API_ROOT=${TELEGRAM_API_ROOT}"
           } > secrets.env
           ssh "${SSH_USER}@${SSH_HOST}" "mkdir -p '${REMOTE_DIR}'"
           scp .deploy/config.env .deploy/docker-compose.yaml secrets.env "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/"

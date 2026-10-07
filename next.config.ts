@@ -18,6 +18,7 @@ const tunnelDevOrigins = [
 const nextConfig: NextConfig = {
   // Project rules live in AGENTS.md + .agents/rules/ (not Next.js generated block)
   agentRules: false,
+  output: "standalone",
   serverExternalPackages: ["nodemailer"],
   experimental: {
     serverActions: {

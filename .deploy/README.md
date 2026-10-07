@@ -21,7 +21,8 @@
 | `Dockerfile` | Production-образ Next.js + миграции Drizzle при старте |
 | `docker-compose.yaml` | Сервис `oval` за Traefik |
 | `config.env` | Несекретный конфиг (редактируется в git) |
-| `entrypoint.sh` | `drizzle-kit migrate` → `next start` |
+| `entrypoint.sh` | `drizzle-kit migrate` → `node server.js` (Next.js standalone) |
+| `migrate-package.json` | Минимальные deps только для migrate в `/app/migrate` |
 
 ## GitHub Actions
 

@@ -20,28 +20,28 @@ RUN pnpm run build
 
 FROM node:${NODE_VERSION}-bookworm-slim AS runner
 
-ARG PNPM_VERSION
-
 WORKDIR /app
-
-RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
-COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml /app/.npmrc ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/.next ./.next
+# Next.js standalone (traced server + minimal node_modules)
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.ts ./
-COPY --from=builder /app/lib/config ./lib/config
+
+# Drizzle migrate — отдельный mini node_modules (без devDeps всего приложения)
+WORKDIR /app/migrate
+COPY .deploy/migrate-package.json ./package.json
+RUN npm install --omit=dev --no-package-lock
 COPY --from=builder /app/drizzle.config.ts ./
 COPY --from=builder /app/drizzle ./drizzle
-COPY --from=builder /app/lib/db ./lib/db
+COPY --from=builder /app/lib/db/schema ./lib/db/schema
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
-COPY .deploy/entrypoint.sh /entrypoint.sh
 
+WORKDIR /app
+COPY .deploy/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
 EXPOSE 3000
