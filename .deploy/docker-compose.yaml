@@ -1,16 +1,13 @@
-# VPS: Traefik (external) → Next.js.
-# Config: config.env (repo). Secrets: secrets.env (GitHub Actions).
+# VPS: Traefik (external) → Next.js. docker-compose 1.27 on server (omsk-bike).
+version: "3.7"
+
 services:
   oval:
     image: ${OVAL_IMAGE}
     restart: unless-stopped
     env_file:
-      - path: config.env
-        required: true
-      - path: secrets.env
-        required: true
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - config.env
+      - secrets.env
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.oval.rule=Host(`${OVAL_DOMAIN}`)"

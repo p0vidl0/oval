@@ -104,7 +104,6 @@ jobs:
         run: |
           set -euo pipefail
           REMOTE_DIR="${SSH_PATH%/}"
-          COMPOSE_ENV=(--env-file config.env --env-file secrets.env)
           {
             echo "OVAL_IMAGE=${OVAL_IMAGE}"
             echo "DATABASE_URL=${DATABASE_URL}"
@@ -120,4 +119,8 @@ jobs:
           } > secrets.env
           ssh "${SSH_USER}@${SSH_HOST}" "mkdir -p '${REMOTE_DIR}'"
           scp .deploy/config.env .deploy/docker-compose.yaml secrets.env "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/"
-          ssh "${SSH_USER}@${SSH_HOST}" "cd '${REMOTE_DIR}' && docker-compose -f docker-compose.yaml ${COMPOSE_ENV[*]} pull && docker-compose -f docker-compose.yaml ${COMPOSE_ENV[*]} up -d"
+          ssh "${SSH_USER}@${SSH_HOST}" "set -euo pipefail
+            cd '${REMOTE_DIR}'
+            cat config.env secrets.env > .env
+            docker-compose -f docker-compose.yaml pull
+            docker-compose -f docker-compose.yaml up -d"

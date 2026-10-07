@@ -8,6 +8,7 @@
 |------|----------|
 | `config.env` | репозиторий [`.deploy/config.env`](config.env) — домен, Traefik, SMTP-хост, публичные URL |
 | `secrets.env` | генерируется в CI при каждом деплое |
+| `.env` | на деплое: `cat config.env secrets.env` — подстановки `${OVAL_*}` для docker-compose 1.27 |
 | `docker-compose.yaml` | репозиторий |
 
 Шаблон секретов: [`secrets.env.example`](secrets.env.example).
