@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   MAX_IMAGES_PER_POST,
@@ -45,4 +45,41 @@ export function resolveUploadPath(storageKey: string): string | null {
     return null;
   }
   return path.join(UPLOAD_ROOT, storageKey);
+}
+
+const UPLOAD_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+};
+
+export function uploadContentType(storageKey: string): string {
+  const ext = storageKey.split(".").pop() ?? "jpg";
+  return UPLOAD_MIME[ext] ?? "application/octet-stream";
+}
+
+export type PostUploadFile = {
+  storageKey: string;
+  filename: string;
+  contentType: string;
+  data: Buffer;
+};
+
+/** Файл поста с диска (`data/uploads`) — для отправки в Telegram без публичного URL. */
+export async function readPostUploadFile(
+  storageKey: string,
+): Promise<PostUploadFile | null> {
+  const filePath = resolveUploadPath(storageKey);
+  if (!filePath) return null;
+  try {
+    const data = await readFile(filePath);
+    return {
+      storageKey,
+      filename: storageKey,
+      contentType: uploadContentType(storageKey),
+      data,
+    };
+  } catch {
+    return null;
+  }
 }

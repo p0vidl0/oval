@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import {
-  sendTelegramMediaGroup,
+  sendTelegramMediaGroupUpload,
   sendTelegramMessage,
-  sendTelegramPhoto,
+  sendTelegramPhotoUpload,
 } from "@/lib/bots/telegram/api";
 import {
   getTelegramChannelId,
@@ -22,17 +22,11 @@ import {
   buildMiniAppStartParamPost,
   buildTelegramMiniAppLink,
 } from "@/lib/telegram/mini-app-start-param";
-import { uploadPublicUrl } from "@/lib/uploads/storage";
+import { type PostUploadFile, readPostUploadFile } from "@/lib/uploads/storage";
 
 function publicSiteOrigin(): string {
   const raw = process.env.BETTER_AUTH_URL?.trim().replace(/\/$/, "");
   return raw ?? "";
-}
-
-function absoluteUploadUrl(storageKey: string): string | null {
-  const origin = publicSiteOrigin();
-  if (!origin) return null;
-  return `${origin}${uploadPublicUrl(storageKey)}`;
 }
 
 function openPostUrl(postId: string): string {
@@ -64,14 +58,14 @@ async function buildTelegramCaption(
   return formatFeedPostTelegramHtml(post.title, post.body);
 }
 
-async function resolvePhotoUrls(postId: string): Promise<string[]> {
+async function resolvePhotoUploads(postId: string): Promise<PostUploadFile[]> {
   const images = await listImagesForPost(postId);
-  const urls: string[] = [];
+  const files: PostUploadFile[] = [];
   for (const img of images) {
-    const url = absoluteUploadUrl(img.storageKey);
-    if (url) urls.push(url);
+    const file = await readPostUploadFile(img.storageKey);
+    if (file) files.push(file);
   }
-  return urls;
+  return files;
 }
 
 async function sendChannelPost(
@@ -79,12 +73,12 @@ async function sendChannelPost(
   postId: string,
   type: FeedPostType,
   caption: string,
-  photoUrls: string[],
+  photos: PostUploadFile[],
 ): Promise<number> {
   const keyboard = postButtonMarkup(postId, type);
   const parseMode = "HTML" as const;
 
-  if (photoUrls.length === 0) {
+  if (photos.length === 0) {
     const { messageId } = await sendTelegramMessage(channelId, caption, {
       parse_mode: parseMode,
       inline_keyboard: keyboard,
@@ -92,19 +86,19 @@ async function sendChannelPost(
     return messageId;
   }
 
-  if (photoUrls.length === 1) {
-    const { messageId } = await sendTelegramPhoto(
+  if (photos.length === 1) {
+    const { messageId } = await sendTelegramPhotoUpload(
       channelId,
-      photoUrls[0] as string,
+      photos[0] as PostUploadFile,
       caption,
       { parse_mode: parseMode, inline_keyboard: keyboard },
     );
     return messageId;
   }
 
-  const { messageIds } = await sendTelegramMediaGroup(
+  const { messageIds } = await sendTelegramMediaGroupUpload(
     channelId,
-    photoUrls,
+    photos,
     caption,
     { parse_mode: parseMode },
   );
@@ -129,24 +123,14 @@ export async function publishFeedPostToTelegramChannel(
   if (!channelId) return;
 
   const caption = await buildTelegramCaption(post);
-  const photoUrls = await resolvePhotoUrls(postId);
-  if (photoUrls.length > 0 && !publicSiteOrigin()) {
-    console.warn(
-      "[telegram-channel-publish]",
-      postId,
-      "BETTER_AUTH_URL not set — skip photos",
-    );
-  }
-
-  const urlsForSend =
-    photoUrls.length > 0 && publicSiteOrigin() ? photoUrls : [];
+  const photos = await resolvePhotoUploads(postId);
 
   const messageId = await sendChannelPost(
     channelId,
     post.id,
     post.type,
     caption,
-    urlsForSend,
+    photos,
   );
 
   const nextMeta: FeedPostMeta = {
