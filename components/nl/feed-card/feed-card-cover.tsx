@@ -1,5 +1,6 @@
 "use client";
 
+import { NlContentImage } from "@/components/nl/content-image";
 import { CardMetaWhen } from "@/components/nl/feed-card/feed-card-meta";
 import { useFeedCardPhotoOpen } from "@/components/nl/feed-card/feed-card-photo-context";
 import {
@@ -32,9 +33,10 @@ export function FeedCardCoverBlock({
 
   return (
     <div className="nl-card-cover">
-      <img
+      <NlContentImage
         src={image.src}
         alt={image.alt}
+        sizes="(max-width: 768px) 100vw, 720px"
         role={openAt ? "button" : undefined}
         tabIndex={openAt ? 0 : undefined}
         style={openAt ? { cursor: "pointer" } : undefined}

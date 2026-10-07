@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { NlContentImage } from "@/components/nl/content-image";
 import type { GalleryImage } from "@/components/nl/photo-gallery";
 
 /** Как в `lib/uploads/storage.ts`: сервер проверит то же самое. */
@@ -252,11 +253,12 @@ export function PhotoPicker({ existing, maxImages, onChange }: Props) {
         {hiddenFields}
         {newPhoto || showCurrent ? (
           <div className="nl-photo-single" {...dropProps}>
-            <img
-              src={newPhoto ? newPhoto.src : current?.src}
-              alt={newPhoto ? newPhoto.file.name : (current?.alt ?? "")}
-              className="nl-photo-single__img"
-            />
+            <div className="nl-photo-single__img">
+              <NlContentImage
+                src={newPhoto ? newPhoto.src : (current?.src ?? "")}
+                alt={newPhoto ? newPhoto.file.name : (current?.alt ?? "")}
+              />
+            </div>
             <div className="nl-photo-single__bar">
               <span className="nl-photo-single__name">
                 {newPhoto
@@ -316,7 +318,7 @@ export function PhotoPicker({ existing, maxImages, onChange }: Props) {
               key={p.id}
               className={`nl-photo-tile${isRemoved ? " nl-photo-tile--removed" : ""}`}
             >
-              <img src={p.src} alt={p.alt} />
+              <NlContentImage src={p.src} alt={p.alt} />
               {p.id === firstKeptId ? (
                 <span className="nl-photo-tile__tag">Обложка</span>
               ) : null}
@@ -344,7 +346,7 @@ export function PhotoPicker({ existing, maxImages, onChange }: Props) {
         })}
         {pending.map((p, i) => (
           <li key={p.key} className="nl-photo-tile">
-            <img src={p.src} alt={p.file.name} />
+            <NlContentImage src={p.src} alt={p.file.name} />
             <span className="nl-photo-tile__tag nl-photo-tile__tag--new">
               {!firstKeptId && i === 0 ? "Обложка · новое" : "Новое"}
             </span>

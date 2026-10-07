@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { Suspense } from "react";
 import { LoginForm } from "@/app/login/login-form";
 import { LoginNextPreview } from "@/app/login/login-next-preview";
@@ -16,9 +17,12 @@ export default async function LoginPage({ searchParams }: Props) {
   return (
     <main className="nl-root nl-login-page">
       <section className="nl-login-cover">
-        <img
+        <Image
           src="/photos/login-bg.jpg"
           alt=""
+          fill
+          priority
+          sizes="100vw"
           className="nl-login-cover__photo"
         />
         <div className="nl-login-cover__scrim" aria-hidden="true" />

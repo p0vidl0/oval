@@ -1291,10 +1291,10 @@ select.nl-input {
 }
 
 .nl-photo-single__img {
+  position: relative;
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
-  object-fit: cover;
 }
 
 .nl-photo-single__bar {

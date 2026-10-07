@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef } from "react";
+import { NlContentImage } from "@/components/nl/content-image";
 import type { GalleryImage } from "@/components/nl/photo-gallery";
 
 type Props = {
@@ -100,7 +101,15 @@ export function NlPhotoLightbox({
         <p id={titleId} className="nl-lightbox__counter nl-mono">
           {index + 1} / {count}
         </p>
-        <img className="nl-lightbox__img" src={current.src} alt={current.alt} />
+        <NlContentImage
+          mode="intrinsic"
+          className="nl-lightbox__img"
+          src={current.src}
+          alt={current.alt}
+          width={1600}
+          height={1200}
+          sizes="100vw"
+        />
       </div>
     </div>
   );

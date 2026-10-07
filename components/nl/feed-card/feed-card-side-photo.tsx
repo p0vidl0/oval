@@ -1,5 +1,6 @@
 "use client";
 
+import { NlContentImage } from "@/components/nl/content-image";
 import { useFeedCardPhotoOpen } from "@/components/nl/feed-card/feed-card-photo-context";
 import type { GalleryImage } from "@/components/nl/photo-gallery";
 
@@ -14,11 +15,13 @@ export function FeedCardSidePhoto({
 
   return (
     <div className="nl-card__side-photo">
-      <img
+      <NlContentImage
         src={image.src}
         alt={image.alt}
+        sizes="280px"
         role={openAt ? "button" : undefined}
         tabIndex={openAt ? 0 : undefined}
+        style={openAt ? { cursor: "pointer" } : undefined}
         onClick={openAt ? () => openAt(index) : undefined}
         onKeyDown={
           openAt

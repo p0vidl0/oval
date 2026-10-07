@@ -1,5 +1,7 @@
 "use client";
 
+import { NlContentImage } from "@/components/nl/content-image";
+
 export type GalleryImage = {
   src: string;
   alt: string;
@@ -41,10 +43,12 @@ export function NlPhotoGallery({
   if (images.length === 0) return null;
   if (images.length === 1) {
     return (
-      <img
+      <NlContentImage
+        mode="intrinsic"
         className="nl-photo"
         src={images[0].src}
         alt={images[0].alt}
+        style={{ width: "100%", height: "auto" }}
         {...openableProps(onOpenAt, indexOffset)}
       />
     );
@@ -61,13 +65,16 @@ export function NlPhotoGallery({
         }}
       >
         {images.map((img, i) => (
-          <img
+          <div
             key={img.src}
-            src={img.src}
-            alt={img.alt}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            {...openableProps(onOpenAt, indexOffset + i)}
-          />
+            style={{ position: "relative", width: "100%", aspectRatio: "1" }}
+          >
+            <NlContentImage
+              src={img.src}
+              alt={img.alt}
+              {...openableProps(onOpenAt, indexOffset + i)}
+            />
+          </div>
         ))}
       </div>
     );
@@ -81,16 +88,9 @@ export function NlPhotoGallery({
           key={img.src}
           className={`nl-gallery__tile${i === 0 ? " nl-gallery__tile--main" : ""}`}
         >
-          <img
+          <NlContentImage
             src={img.src}
             alt={img.alt}
-            style={{
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
             {...openableProps(onOpenAt, indexOffset + i)}
           />
           {i === 2 && extra > 0 ? (
