@@ -25,5 +25,6 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/next.config.ts ./
+COPY --from=builder /app/lib/config ./lib/config
 EXPOSE 3000
 CMD ["pnpm", "exec", "next", "start", "-H", "0.0.0.0", "-p", "3000"]
