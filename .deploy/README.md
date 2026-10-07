@@ -46,3 +46,5 @@ Workflow: [`.github/workflows/deploy-vps.yml`](../.github/workflows/deploy-vps.y
 4. Отредактировать **`config.env`** в репо (домен, URL), задать secrets в GitHub → деплой.
 
 Миграции при каждом старте контейнера (`entrypoint.sh`).
+
+На старом Docker (20.x) для Node в compose задано `security_opt: seccomp=unconfined` — иначе падает `uv_thread_create` при старте процесса.

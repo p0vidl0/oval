@@ -6,5 +6,6 @@ if [ -z "${DATABASE_URL:-}" ]; then
   exit 1
 fi
 echo "oval: applying database migrations…"
-pnpm exec drizzle-kit migrate
-exec pnpm exec next start -H 0.0.0.0 -p 3000
+node ./node_modules/drizzle-kit/bin.cjs migrate
+echo "oval: starting Next.js…"
+exec node ./node_modules/next/dist/bin/next start -H 0.0.0.0 -p "${PORT:-3000}"

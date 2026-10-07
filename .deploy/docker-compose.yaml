@@ -8,6 +8,9 @@ services:
     env_file:
       - config.env
       - secrets.env
+    # Docker 20.10 + default seccomp: Node cannot create worker threads (uv_thread_create).
+    security_opt:
+      - seccomp=unconfined
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.oval.rule=Host(`${OVAL_DOMAIN}`)"

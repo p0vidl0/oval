@@ -29,9 +29,9 @@ RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
-ENV PORT=8080
+ENV PORT=3000
 
-COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/.npmrc ./
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml /app/.npmrc ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
@@ -44,6 +44,6 @@ COPY .deploy/entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh
 
-EXPOSE 8080
+EXPOSE 3000
 
 ENTRYPOINT ["/entrypoint.sh"]
