@@ -143,6 +143,7 @@ export async function createTrainingSession(params: {
     /** `null` — черновик; в будущем — отложенная публикация. */
     publishedAt: Date | null;
     pinned: boolean;
+    publishToTelegram: boolean;
   } | null;
   actorUserId: string | null;
 }): Promise<{ sessionId: string; announcementPostId: string | null }> {
@@ -174,6 +175,7 @@ export async function createTrainingSession(params: {
         authorUserId: params.actorUserId,
         relatedSessionId: sessionId,
         pinned: a.pinned,
+        publishToTelegram: a.publishToTelegram,
       });
       await savePinnedForState(tx, announcementPostId, a.pinned, {
         status: a.publishedAt ? "published" : "draft",

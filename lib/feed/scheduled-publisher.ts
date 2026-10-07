@@ -5,6 +5,7 @@
  */
 import { and, eq, gt, lte } from "drizzle-orm";
 import { applyPinned } from "@/lib/admin/post-pinning";
+import { tryPublishFeedPostToTelegramChannel } from "@/lib/bots/telegram/publish-feed-post";
 import { db } from "@/lib/db/client";
 import { feedPosts } from "@/lib/db/schema";
 import { publishFeedEvent } from "@/lib/realtime/feed-event-bus";
@@ -31,6 +32,7 @@ export async function releaseDuePosts(from: Date, to: Date) {
 
   for (const post of due) {
     if (post.pinned) await applyPinned(db, post.id, true);
+    await tryPublishFeedPostToTelegramChannel(post.id);
     publishFeedEvent({ type: "feed.post_published", postId: post.id });
     if (post.relatedSessionId) {
       publishFeedEvent({

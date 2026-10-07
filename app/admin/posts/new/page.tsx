@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminBanner } from "@/components/admin/admin-badges";
 import { PublicationEditor } from "@/components/admin/publication-editor";
 import { createPublication } from "@/lib/admin/feed-actions";
+import { isTelegramChannelPublishConfigured } from "@/lib/bots/telegram/channel-config";
 import {
   getAnnouncementForSession,
   getTrainingSessionById,
@@ -45,6 +46,7 @@ export default async function NewPublicationPage({ searchParams }: Props) {
           action={createPublication}
           mode={training ? "announcement" : "news"}
           training={training}
+          telegramChannelPublish={isTelegramChannelPublishConfigured()}
         />
       )}
       {!training ? (

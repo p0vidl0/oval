@@ -85,6 +85,7 @@ run("training sessions", () => {
         body: "Ждём",
         publishedAt: new Date(),
         pinned: false,
+        publishToTelegram: false,
       },
       actorUserId: null,
     });

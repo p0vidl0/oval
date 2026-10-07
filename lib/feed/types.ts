@@ -23,6 +23,8 @@ export type FeedPostMeta = {
   previousEndsAt?: string | null;
   newStartsAt?: string;
   newEndsAt?: string | null;
+  /** ID сообщения в Telegram-канале после autopublish. */
+  telegramChannelMessageId?: number;
 };
 
 export type FeedPostStatus = "draft" | "published" | "unpublished";

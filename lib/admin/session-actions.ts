@@ -6,6 +6,7 @@ import { emitFeedPostLive } from "@/lib/admin/feed-live";
 import {
   initialPublicationState,
   PublicationError,
+  readPublishToTelegram,
 } from "@/lib/admin/publication-form";
 import { requireEditor } from "@/lib/admin/require-editor";
 import { appendImagesFromForm } from "@/lib/admin/save-post-images";
@@ -15,6 +16,7 @@ import {
   readRequiredScheduleFromForm,
   readTrainingSettingsFromForm,
 } from "@/lib/admin/training-form";
+import { tryPublishFeedPostToTelegramChannel } from "@/lib/bots/telegram/publish-feed-post";
 import { maxImagesForPostType } from "@/lib/feed/post-image-limits";
 import { isPostLive } from "@/lib/feed/publication";
 import { publishFeedEvent } from "@/lib/realtime/feed-event-bus";
@@ -82,6 +84,7 @@ export async function createTrainingAction(formData: FormData) {
               body: String(formData.get("body") ?? "").trim(),
               publishedAt: publication?.publishedAt ?? null,
               pinned: formData.get("pinned") === "on",
+              publishToTelegram: readPublishToTelegram(formData),
             }
           : null,
         actorUserId: session.user.id,
@@ -98,6 +101,7 @@ export async function createTrainingAction(formData: FormData) {
           publication ? isPostLive(publication) : false,
           false,
         );
+        await tryPublishFeedPostToTelegramChannel(result.announcementPostId);
       }
       revalidateTraining(result.sessionId);
       return sessionUrl(result.sessionId, { done: "created" });

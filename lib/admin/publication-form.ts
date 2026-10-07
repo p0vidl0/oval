@@ -13,6 +13,10 @@ export type SubmitAction =
 /** Ошибка ввода, которую показываем на странице, а не экраном ошибки. */
 export class PublicationError extends Error {}
 
+export function readPublishToTelegram(formData: FormData): boolean {
+  return formData.get("publish_to_telegram") === "on";
+}
+
 export function readSubmitAction(formData: FormData): SubmitAction {
   const raw = String(formData.get("submit_action") ?? "save");
   return raw === "publish" ||

@@ -10,12 +10,14 @@ import {
   nextPublicationState,
   PublicationError,
   type PublicationState,
+  readPublishToTelegram,
 } from "@/lib/admin/publication-form";
 import { requireEditor } from "@/lib/admin/require-editor";
 import {
   appendImagesFromForm,
   syncImagesFromForm,
 } from "@/lib/admin/save-post-images";
+import { tryPublishFeedPostToTelegramChannel } from "@/lib/bots/telegram/publish-feed-post";
 import { db } from "@/lib/db/client";
 import { feedPosts } from "@/lib/db/schema";
 import { maxImagesForPostType } from "@/lib/feed/post-image-limits";
@@ -54,6 +56,7 @@ export async function createPublication(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
   const pinned = formData.get("pinned") === "on";
+  const publishToTelegram = readPublishToTelegram(formData);
   const sessionId = String(formData.get("session_id") ?? "").trim() || null;
   const backUrl = sessionId
     ? `/admin/posts/new?session=${sessionId}`
@@ -89,6 +92,7 @@ export async function createPublication(formData: FormData) {
       authorUserId: session.user.id,
       relatedSessionId: sessionId,
       pinned,
+      publishToTelegram,
     });
     await savePinnedForState(tx, id, pinned, state);
   });
@@ -96,6 +100,7 @@ export async function createPublication(formData: FormData) {
 
   revalidatePost(id, sessionId);
   emitFeedPostLive(id, isPostLive(state), false);
+  await tryPublishFeedPostToTelegramChannel(id);
   if (sessionId) {
     publishFeedEvent({ type: "session.changed", sessionId });
     redirect(`/admin/sessions/${sessionId}?tab=history`);
@@ -128,11 +133,12 @@ export async function updatePublication(formData: FormData) {
     redirect(withError(postUrl, error.message));
   }
   const pinned = next.status === "published" && formData.get("pinned") === "on";
+  const publishToTelegram = readPublishToTelegram(formData);
 
   await db.transaction(async (tx) => {
     await tx
       .update(feedPosts)
-      .set({ title, body, pinned, ...next })
+      .set({ title, body, pinned, publishToTelegram, ...next })
       .where(eq(feedPosts.id, postId));
     await savePinnedForState(tx, postId, pinned, next);
   });
@@ -148,6 +154,7 @@ export async function updatePublication(formData: FormData) {
   const wasLive = isPostLive(post, now);
   const isLive = isPostLive(next, now);
   emitFeedPostLive(postId, isLive, wasLive);
+  await tryPublishFeedPostToTelegramChannel(postId);
 
   const rescheduled =
     isPostScheduled(next, now) &&

@@ -105,6 +105,14 @@ Prod / staging (OIDC):
 
 Локально — HTTPS tunnel (как для OIDC). Menu Button / тест — из клиента Telegram.
 
+### Публикация в канал
+
+- **`TELEGRAM_BOT_TOKEN`** — бот с правом постить в канал (админ).
+- **`TELEGRAM_CHANNEL_ID`** — `@username` канала или numeric id `-100…`.
+- В редакторе публикации / новой тренировки с анонсом — чекбокс **«Запостить в Telegram-канал»** (виден только если оба env заданы).
+- Отправка при **первом выходе в ленту** (сразу или по расписанию через `scheduled-publisher`); повторно не шлёт, если в `meta.telegramChannelMessageId` уже есть id.
+- Фото поста — по публичным URL `BETTER_AUTH_URL/uploads/…` (Telegram должен достучаться до origin). **Анонс:** подпись к фото — две строки расписания (🚴‍♂️ дата, 🕗 начало) и текст анонса; новости — заголовок + текст.
+
 ## Validate before merge
 
 ```bash

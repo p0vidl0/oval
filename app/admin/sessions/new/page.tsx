@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AdminBanner } from "@/components/admin/admin-badges";
 import { PublicationEditor } from "@/components/admin/publication-editor";
 import { createTrainingAction } from "@/lib/admin/session-actions";
+import { isTelegramChannelPublishConfigured } from "@/lib/bots/telegram/channel-config";
 
 type Props = { searchParams: Promise<{ error?: string }> };
 
@@ -23,7 +24,11 @@ export default async function NewTrainingPage({ searchParams }: Props) {
         Новая тренировка
       </h1>
       {error ? <AdminBanner tone="error">{error}</AdminBanner> : null}
-      <PublicationEditor action={createTrainingAction} mode="training" />
+      <PublicationEditor
+        action={createTrainingAction}
+        mode="training"
+        telegramChannelPublish={isTelegramChannelPublishConfigured()}
+      />
     </main>
   );
 }

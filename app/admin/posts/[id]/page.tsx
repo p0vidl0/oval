@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AdminBanner, PostStatusBadge } from "@/components/admin/admin-badges";
 import { PublicationEditor } from "@/components/admin/publication-editor";
 import { updatePublication } from "@/lib/admin/feed-actions";
+import { isTelegramChannelPublishConfigured } from "@/lib/bots/telegram/channel-config";
 import { listImagesForPost } from "@/lib/feed/post-images";
 import { isPostLive, isPostScheduled } from "@/lib/feed/publication";
 import { getFeedPostById, getTrainingSessionForPost } from "@/lib/feed/queries";
@@ -116,8 +117,10 @@ export default async function AdminPostDetailPage({
           status: post.status,
           scheduledAt: isPostScheduled(post, now) ? post.publishedAt : null,
           pinned: post.pinned,
+          publishToTelegram: post.publishToTelegram,
         }}
         training={post.type === "training_announcement" ? training : null}
+        telegramChannelPublish={isTelegramChannelPublishConfigured()}
         existingImages={images.map((img) => ({
           id: img.id,
           src: uploadPublicUrl(img.storageKey),

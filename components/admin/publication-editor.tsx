@@ -45,6 +45,7 @@ type PostSlice = {
   /** Время выхода, если публикация отложена (вычисляется на сервере). */
   scheduledAt: Date | null;
   pinned: boolean;
+  publishToTelegram: boolean;
 };
 
 /** Тренировка для превью анонса (поля тренировки в форме не редактируются). */
@@ -72,6 +73,8 @@ type Props = {
   post?: PostSlice;
   training?: EditorTraining | null;
   existingImages?: PublicationPreviewExistingImage[];
+  /** Показать «Запостить в ТГ» (на сервере настроены bot token + channel id). */
+  telegramChannelPublish?: boolean;
 };
 
 type Viewport = "desktop" | "mobile";
@@ -313,6 +316,7 @@ export function PublicationEditor({
   post,
   training,
   existingImages = EMPTY_EXISTING_IMAGES,
+  telegramChannelPublish = false,
 }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
   const [viewport, setViewport] = useState<Viewport>("desktop");
@@ -447,6 +451,17 @@ export function PublicationEditor({
               />
               Закрепить вверху ленты
             </label>
+
+            {telegramChannelPublish ? (
+              <label className="nl-check">
+                <input
+                  name="publish_to_telegram"
+                  type="checkbox"
+                  defaultChecked={post?.publishToTelegram ?? false}
+                />
+                Запостить в Telegram-канал
+              </label>
+            ) : null}
 
             <PhotoPicker
               // После сохранения набор фото меняется — сбрасываем выбранные файлы.
