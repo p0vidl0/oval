@@ -1,4 +1,5 @@
 import { getTelegramBotToken } from "@/lib/auth/telegram/config";
+import { telegramBotMethodUrl } from "@/lib/bots/telegram/api-root";
 
 type InlineKeyboardButton = {
   text: string;
@@ -23,7 +24,7 @@ async function callTelegramBotApi(
   const token = getTelegramBotToken();
   if (!token) throw new Error("TELEGRAM_BOT_TOKEN not configured");
 
-  const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+  const res = await fetch(telegramBotMethodUrl(token, method), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

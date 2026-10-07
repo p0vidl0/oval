@@ -55,6 +55,12 @@ pnpm run task -- test-e2e    # e2e-up + seed + Playwright (stack down after succ
 pnpm run task -- e2e-down
 ```
 
+## Telegram Bot API proxy (optional)
+
+Если с сервера недоступен `api.telegram.org`, задайте **`TELEGRAM_API_ROOT`** — базовый URL reverse proxy (без слэша в конце), по тому же принципу, что `TELEGRAM_API_ROOT` в проекте society-bot. Запросы идут на `{TELEGRAM_API_ROOT}/bot<token>/<method>`.
+
+Прокси должен проксировать официальный Bot API (тот же path `/bot…`). Webhook **входящий** по-прежнему на ваш `https://<domain>/api/webhooks/telegram`.
+
 ## Telegram login (optional)
 
 Env (see [`.docker/env/oval-dev.local.env.example`](../../.docker/env/oval-dev.local.env.example)):
