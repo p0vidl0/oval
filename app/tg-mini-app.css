@@ -9,3 +9,15 @@ html.tg-mini-app body.nl-root {
   background: var(--tg-theme-bg-color, var(--bg));
   color: var(--tg-theme-text-color, var(--ink));
 }
+
+.nl-mini-app-auth-error {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: var(--space-3) var(--space-4);
+  background: var(--cancel-tint);
+  color: var(--cancel);
+  font-size: 14px;
+  line-height: 1.4;
+  border-bottom: 1px solid var(--line);
+}

@@ -3,6 +3,10 @@ import {
   getTelegramBotToken,
   getTelegramLoginIntentTtlSec,
 } from "@/lib/auth/telegram/config";
+import {
+  buildInitDataCheckString,
+  parseInitDataQuery,
+} from "@/lib/auth/telegram/parse-init-data-query";
 import { parseTelegramInitDataUserJson } from "@/lib/auth/telegram/profile-from-init-data";
 import type { TelegramProfile } from "@/lib/auth/telegram/types";
 
@@ -17,16 +21,6 @@ export type VerifiedTelegramInitData = {
 function initDataMaxAgeSec(): number {
   const intentTtl = getTelegramLoginIntentTtlSec();
   return Math.max(intentTtl, MINI_APP_INIT_DATA_MAX_AGE_SEC);
-}
-
-function buildDataCheckString(params: URLSearchParams): string {
-  const pairs: string[] = [];
-  for (const [key, value] of params.entries()) {
-    if (key === "hash") continue;
-    pairs.push(`${key}=${value}`);
-  }
-  pairs.sort();
-  return pairs.join("\n");
 }
 
 function computeInitDataHash(
@@ -44,11 +38,14 @@ export function signTelegramInitDataForTest(
   fields: Record<string, string>,
   botToken: string,
 ): string {
-  const params = new URLSearchParams(fields);
-  const dataCheckString = buildDataCheckString(params);
+  const map = new Map(Object.entries(fields));
+  const dataCheckString = buildInitDataCheckString(map);
   const hash = computeInitDataHash(dataCheckString, botToken).toString("hex");
-  params.set("hash", hash);
-  return params.toString();
+  const parts = [...map.entries()].map(
+    ([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`,
+  );
+  parts.push(`hash=${hash}`);
+  return parts.join("&");
 }
 
 export function verifyTelegramInitData(
@@ -58,17 +55,11 @@ export function verifyTelegramInitData(
   const token = botToken ?? getTelegramBotToken();
   if (!token?.trim() || !initData?.trim()) return null;
 
-  let params: URLSearchParams;
-  try {
-    params = new URLSearchParams(initData);
-  } catch {
-    return null;
-  }
-
-  const receivedHash = params.get("hash");
+  const fields = parseInitDataQuery(initData);
+  const receivedHash = fields.get("hash");
   if (!receivedHash || !/^[a-f0-9]{64}$/i.test(receivedHash)) return null;
 
-  const dataCheckString = buildDataCheckString(params);
+  const dataCheckString = buildInitDataCheckString(fields);
   const calculated = computeInitDataHash(dataCheckString, token);
   const received = Buffer.from(receivedHash, "hex");
   if (
@@ -78,7 +69,7 @@ export function verifyTelegramInitData(
     return null;
   }
 
-  const authDateRaw = params.get("auth_date");
+  const authDateRaw = fields.get("auth_date");
   const authDate = authDateRaw ? Number.parseInt(authDateRaw, 10) : Number.NaN;
   if (!Number.isFinite(authDate)) return null;
 
@@ -86,12 +77,10 @@ export function verifyTelegramInitData(
   if (authDate > nowSec + 60) return null;
   if (nowSec - authDate > initDataMaxAgeSec()) return null;
 
-  const profile = parseTelegramInitDataUserJson(
-    params.get("user") ?? undefined,
-  );
+  const profile = parseTelegramInitDataUserJson(fields.get("user"));
   if (!profile) return null;
 
-  const startParam = params.get("start_param") ?? undefined;
+  const startParam = fields.get("start_param");
 
   return {
     profile,

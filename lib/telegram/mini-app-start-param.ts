@@ -48,10 +48,18 @@ export function resolveStartParamRoute(
   return null;
 }
 
-/** Direct Mini App link: https://t.me/{bot}/{shortName}?startapp=... */
+/**
+ * Mini App deep link.
+ * Main App: https://t.me/{bot}?startapp=...
+ * Direct app: https://t.me/{bot}/{shortName}?startapp=...
+ */
 export function buildTelegramMiniAppLink(startParam: string): string | null {
   const username = getTelegramBotUsername();
+  if (!username) return null;
+  const encoded = encodeURIComponent(startParam);
   const shortName = getTelegramMiniAppShortName();
-  if (!username || !shortName) return null;
-  return `https://t.me/${username}/${shortName}?startapp=${encodeURIComponent(startParam)}`;
+  if (shortName) {
+    return `https://t.me/${username}/${shortName}?startapp=${encoded}`;
+  }
+  return `https://t.me/${username}?startapp=${encoded}`;
 }
