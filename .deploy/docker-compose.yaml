@@ -20,6 +20,8 @@ services:
       - "traefik.http.routers.oval.middlewares=oval-compress"
       - "traefik.http.middlewares.oval-compress.compress=true"
       - "traefik.http.services.oval.loadbalancer.server.port=3000"
+    volumes:
+      - ./data/uploads:/app/data/uploads
     logging:
       driver: json-file
       options:

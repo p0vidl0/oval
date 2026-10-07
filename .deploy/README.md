@@ -10,6 +10,7 @@
 | `secrets.env` | генерируется в CI при каждом деплое |
 | `.env` | на деплое: `cat config.env secrets.env` — подстановки `${OVAL_*}` для docker-compose 1.27 |
 | `docker-compose.yaml` | репозиторий |
+| `data/uploads/` | том: загруженные изображения постов (`/app/data/uploads` в контейнере) |
 
 Шаблон секретов: [`secrets.env.example`](secrets.env.example).
 
@@ -41,9 +42,10 @@ Workflow: [`.github/workflows/deploy-vps.yml`](../.github/workflows/deploy-vps.y
 ## Подготовка сервера (чеклист)
 
 1. **Пользователь и каталог** — пользователь `oval`, каталог `SSH_PATH`, ключ деплоя, доступ к Docker.
-2. **Postgres** — пользователь/БД `oval`, доступ с Docker (`host.docker.internal` в `DATABASE_URL`).
-3. **Traefik** — та же external-сеть, что у omsk-bike (`TRAEFIK_NETWORK` в `config.env`).
-4. Отредактировать **`config.env`** в репо (домен, URL), задать secrets в GitHub → деплой.
+2. **Postgres** — пользователь/БД `oval`, хост `postgres:5432` в сети `theta-brige`.
+3. **`data/uploads`** — создаётся при деплое; persistence загрузок между пересозданиями контейнера.
+4. **Traefik** — та же external-сеть, что у omsk-bike (`TRAEFIK_NETWORK` в `config.env`).
+5. Отредактировать **`config.env`** в репо (домен, URL), задать secrets в GitHub → деплой.
 
 Миграции при каждом старте контейнера (`entrypoint.sh`).
 

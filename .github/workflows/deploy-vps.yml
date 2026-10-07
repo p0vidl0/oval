@@ -121,6 +121,7 @@ jobs:
           scp .deploy/config.env .deploy/docker-compose.yaml secrets.env "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/"
           ssh "${SSH_USER}@${SSH_HOST}" "set -euo pipefail
             cd '${REMOTE_DIR}'
+            mkdir -p data/uploads
             cat config.env secrets.env > .env
             docker-compose -f docker-compose.yaml pull
             docker-compose -f docker-compose.yaml up -d"
