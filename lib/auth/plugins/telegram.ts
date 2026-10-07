@@ -3,7 +3,10 @@ import {
   createAuthEndpoint,
   formCsrfMiddleware,
 } from "better-auth/api";
-import { isTelegramBotLoginConfigured } from "@/lib/auth/telegram/config";
+import {
+  isTelegramBotLoginConfigured,
+  isTelegramMiniAppConfigured,
+} from "@/lib/auth/telegram/config";
 import {
   consumeTelegramLoginIntent,
   createTelegramLoginIntent,
@@ -18,6 +21,7 @@ import {
   type TelegramSignInContext,
 } from "@/lib/auth/telegram/sign-in";
 import { verifyTelegramIdToken } from "@/lib/auth/telegram/verify-id-token";
+import { verifyTelegramInitData } from "@/lib/auth/telegram/verify-init-data";
 
 export const telegram = () => {
   return {
@@ -155,6 +159,44 @@ export const telegram = () => {
           const next = typeof body?.next === "string" ? body.next : undefined;
           const intent = await createTelegramLoginIntent(next);
           return ctx.json(intent);
+        },
+      ),
+
+      signInTelegramMiniApp: createAuthEndpoint(
+        "/sign-in/telegram/mini-app",
+        {
+          method: "POST",
+          requireHeaders: true,
+          use: [formCsrfMiddleware],
+        },
+        async (ctx) => {
+          if (!isTelegramMiniAppConfigured()) {
+            throw APIError.fromStatus("BAD_REQUEST", {
+              message: "Telegram Mini App is not configured",
+            });
+          }
+
+          const body = ctx.body as { initData?: string } | undefined;
+          const initData = body?.initData;
+          if (!initData || initData.length < 10) {
+            throw APIError.fromStatus("BAD_REQUEST", {
+              message: "Invalid initData",
+            });
+          }
+
+          const verified = verifyTelegramInitData(initData);
+          if (!verified) {
+            throw APIError.fromStatus("UNAUTHORIZED", {
+              message: "Invalid Telegram initData",
+            });
+          }
+
+          return ctx.json(
+            await signInWithTelegramProfile(
+              ctx as unknown as TelegramSignInContext,
+              verified.profile,
+            ),
+          );
         },
       ),
 

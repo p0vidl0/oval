@@ -87,6 +87,24 @@ Prod / staging (OIDC):
 
 Если после OIDC видите `null value in column "email"` — БД ещё без миграции; выполните migrate и повторите вход.
 
+## Telegram Mini App (optional)
+
+Тот же сайт открывается внутри Telegram (WebView). Вход — по подписанному **`initData`** (нужен **`TELEGRAM_BOT_TOKEN`**). OIDC в Mini App не используется.
+
+1. BotFather → Mini App → **URL** публичного origin, например `https://<host>/feed` (или `/`).
+2. **`TELEGRAM_BOT_TOKEN`**, **`TELEGRAM_BOT_USERNAME`** — как для бота.
+3. Опционально **`TELEGRAM_MINI_APP_SHORT_NAME`** — short name из BotFather для ссылок вида  
+   `https://t.me/<bot>/<short_name>?startapp=p_<postId>` (см. `lib/telegram/mini-app-start-param.ts`).
+
+**Deep link (`start_param`):**
+
+| Payload | Куда ведёт |
+|---------|------------|
+| `p_<postId>` | `/feed/<postId>` |
+| `pay_<registrationId>` | `/cabinet/pay/<registrationId>` |
+
+Локально — HTTPS tunnel (как для OIDC). Menu Button / тест — из клиента Telegram.
+
 ## Validate before merge
 
 ```bash

@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { authErrorText } from "@/lib/auth/auth-error-text";
 import { authClient } from "@/lib/auth/client";
+import { useTelegramMiniApp } from "@/lib/telegram/mini-app-context";
 
 type Props = {
   oidcConfigured: boolean;
@@ -12,6 +13,11 @@ type Props = {
 export function TelegramLogin({ oidcConfigured }: Props) {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/cabinet";
+  const {
+    isMiniApp,
+    authPending,
+    authError: miniAppAuthError,
+  } = useTelegramMiniApp();
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,6 +41,23 @@ export function TelegramLogin({ oidcConfigured }: Props) {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (isMiniApp) {
+    return (
+      <div className="nl-login-telegram" data-testid="telegram-login">
+        <p className="caption" style={{ color: "var(--ink-2)" }}>
+          {authPending
+            ? "Вход через Telegram…"
+            : "Вы в приложении Telegram — вход выполняется автоматически."}
+        </p>
+        {miniAppAuthError ? (
+          <p className="nl-field-error" role="alert">
+            {miniAppAuthError}
+          </p>
+        ) : null}
+      </div>
+    );
   }
 
   if (!oidcConfigured) {

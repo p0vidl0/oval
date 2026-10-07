@@ -28,6 +28,16 @@ export function isTelegramBotLoginConfigured(): boolean {
   return Boolean(getTelegramBotToken() && getTelegramBotUsername());
 }
 
+export function getTelegramMiniAppShortName(): string | undefined {
+  const name = process.env.TELEGRAM_MINI_APP_SHORT_NAME?.trim();
+  return name || undefined;
+}
+
+/** Mini App sign-in via initData (requires bot token). */
+export function isTelegramMiniAppConfigured(): boolean {
+  return Boolean(getTelegramBotToken());
+}
+
 /** OIDC (web) or bot deep link — show Telegram block on /login */
 export function isTelegramLoginConfigured(): boolean {
   return isTelegramOidcConfigured() || isTelegramBotLoginConfigured();

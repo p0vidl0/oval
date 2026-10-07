@@ -10,6 +10,7 @@ export const telegramClient = () => {
         matcher: (path: string) =>
           path === "/sign-in/telegram/oidc" ||
           path === "/sign-in/telegram/bot" ||
+          path === "/sign-in/telegram/mini-app" ||
           path === "/sign-in/telegram/oidc/callback",
         signal: "$sessionSignal" as const,
       },

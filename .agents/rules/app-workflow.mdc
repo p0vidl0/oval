@@ -26,7 +26,7 @@ Stack: **Next.js App Router**, **Better Auth** (`lib/auth/`), **Drizzle** (`lib/
 - Email normalize: `lib/auth/email.ts`.
 - Auth rate limits: Better Auth `rateLimit` / `emailOTP.rateLimit` in `lib/auth/index.ts`; `BETTER_AUTH_TRUSTED_PROXIES` via `lib/auth/trusted-proxies.ts`.
 - CLI / schema: root `auth.ts` re-exports auth for `pnpm run auth:generate`.
-- **Telegram login:** OIDC (`TELEGRAM_OIDC_*`) — `/telegram/oidc/start`, `/sign-in/telegram/oidc`, GET `/sign-in/telegram/oidc/callback`; bot deep link — `/telegram/login-intent`, `/sign-in/telegram/bot`; webhook `app/api/webhooks/telegram/route.ts`. `user.email` nullable для TG-first.
+- **Telegram login:** OIDC (`TELEGRAM_OIDC_*`) — `/telegram/oidc/start`, `/sign-in/telegram/oidc`, GET `/sign-in/telegram/oidc/callback`; bot deep link — `/telegram/login-intent`, `/sign-in/telegram/bot`; webhook `app/api/webhooks/telegram/route.ts`. **Mini App:** `POST /sign-in/telegram/mini-app` (`initData`, `TELEGRAM_BOT_TOKEN`), клиент [`components/telegram/telegram-mini-app-provider.tsx`](../../components/telegram/telegram-mini-app-provider.tsx), deep link `start_param` — [`lib/telegram/mini-app-start-param.ts`](../../lib/telegram/mini-app-start-param.ts), опц. `TELEGRAM_MINI_APP_SHORT_NAME`. `user.email` nullable для TG-first.
 
 ## Database
 

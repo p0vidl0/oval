@@ -33,7 +33,9 @@ Workflow: [`.github/workflows/deploy-vps.yml`](../.github/workflows/deploy-vps.y
 
 **SSH:** `SSH_HOST`, `SSH_USER`, `SSH_KEY`, `SSH_PATH`, опционально `SSH_KNOWN_HOSTS`.
 
-**Секреты приложения:** `DATABASE_URL`, `BETTER_AUTH_SECRET`, `SMTP_USER`, `SMTP_PASS`, `PAYMENT_WEBHOOK_SECRET`, опционально `TELEGRAM_*`.
+**Секреты приложения:** `DATABASE_URL`, `BETTER_AUTH_SECRET`, `SMTP_USER`, `SMTP_PASS`, `PAYMENT_WEBHOOK_SECRET`, опционально `TELEGRAM_*` (в т.ч. Mini App: bot token + `TELEGRAM_MINI_APP_SHORT_NAME` для deep link).
+
+Mini App URL в BotFather — публичный `https://<OVAL_DOMAIN>/feed` (или `/`). Вход в WebView — автоматически по `initData`.
 
 Домен, Traefik, `BETTER_AUTH_URL`, лимиты proxy, параметры SMTP без пароля — в **`config.env`**, не в GitHub Secrets.
 

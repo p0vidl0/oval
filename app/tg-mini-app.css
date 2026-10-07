@@ -1,0 +1,11 @@
+/* Telegram Mini App — только при html.tg-mini-app (не влияет на обычный web). */
+
+html.tg-mini-app .nl-header {
+  padding-top: env(safe-area-inset-top);
+}
+
+html.tg-mini-app body.nl-root {
+  /* Telegram theme vars — fallback на tokens.css */
+  background: var(--tg-theme-bg-color, var(--bg));
+  color: var(--tg-theme-text-color, var(--ink));
+}

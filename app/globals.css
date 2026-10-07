@@ -2,6 +2,7 @@
 @import "./tokens.css";
 @import "./nl-bundle.css";
 @import "./nl-shell.css";
+@import "./tg-mini-app.css";
 
 html {
   height: 100%;
