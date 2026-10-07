@@ -1,0 +1,47 @@
+---
+description: Next.js app, auth, Drizzle — oval conventions
+globs: app/**,lib/**,middleware.ts,auth.ts,drizzle.config.ts
+alwaysApply: false
+---
+
+# App workflow (oval)
+
+Stack: **Next.js App Router**, **Better Auth** (`lib/auth/`), **Drizzle** (`lib/db/`), **Biome**.
+
+## Layout
+
+- Public routes: `app/` (home, login, future feed).
+- Protected: `app/cabinet/` (any signed-in user), `app/admin/` (roles `editor` | `admin` via `middleware.ts` + `lib/auth/roles.ts`).
+- Auth handler: `app/api/auth/[...all]/route.ts` — do not fork Better Auth routes manually.
+- Business logic: prefer `lib/*` modules; keep route files thin.
+- Feed card UI: `components/nl/feed-card/` (facade `NlFeedPostCard` re-exported from `feed-post-card.tsx`). Admin create/edit: `components/admin/publication-editor.tsx` (modes `news` / `announcement` / `training`) + preview mapper `lib/admin/publication-preview.ts`.
+- Admin is training-first: `/admin/sessions` (list) → `/admin/sessions/[id]` (tabs: participants / settings / history; reschedule & cancel dialogs). Posts are the communication layer (`/admin/posts`); `/admin/registrations` — participants (search, history); `/admin/payments` — «Ждут оплаты» / «Возвраты» with row actions. Admin lists are paginated server-side (`lib/admin/pagination.ts`, `?page=`, default 10).
+- Training domain ops: `lib/training/session-service.ts` (no auth/revalidate — covered by integration tests); server actions in `lib/admin/session-actions.ts`, `lib/admin/registration-actions.ts`; admin queries in `lib/training/admin-queries.ts`.
+
+## Auth / email OTP
+
+- Server auth: `lib/auth/index.ts`, session helper `lib/auth/session.ts`.
+- Client: `lib/auth/client.ts` only in `"use client"` components.
+- OTP delivery: `lib/email/send-otp.ts` (`stub` / `recording` / `smtp` via `EMAIL_PROVIDER`); SMTP limits in `lib/email/otp-send-limits.ts` + `email_otp_send_log`. Prod Postbox: [`docs/engineering/email.md`](../../docs/engineering/email.md).
+- Email normalize: `lib/auth/email.ts`.
+- Auth rate limits: Better Auth `rateLimit` / `emailOTP.rateLimit` in `lib/auth/index.ts`; `BETTER_AUTH_TRUSTED_PROXIES` via `lib/auth/trusted-proxies.ts`.
+- CLI / schema: root `auth.ts` re-exports auth for `pnpm run auth:generate`.
+- **Telegram login:** OIDC (`TELEGRAM_OIDC_*`) — `/telegram/oidc/start`, `/sign-in/telegram/oidc`, GET `/sign-in/telegram/oidc/callback`; bot deep link — `/telegram/login-intent`, `/sign-in/telegram/bot`; webhook `app/api/webhooks/telegram/route.ts`. `user.email` nullable для TG-first.
+
+## Database
+
+- Schema: `lib/db/schema/` — `auth-schema.ts` generated; extend via `index.ts` exports when adding app tables.
+- Migrations: `drizzle/` via `pnpm run db:generate` + `pnpm run db:migrate`. Drizzle runs all pending migrations in **one transaction**: a new enum value cannot be used in the same run — recreate the enum (rename → create → `ALTER COLUMN … TYPE … USING`) when backfill needs it.
+- **No hard deletes of domain data**: posts → `status = unpublished`; trainings → only `cancelled` (no delete); registrations → status (`cancelled` + `cancelled_by`, `refunded`, `transferred`); post photos → `removed_at`. Domain FKs are `ON DELETE RESTRICT`; no `db.delete` on domain tables.
+- **Participant rules**: registration closes at `startsAt` (`isRegistrationOpen`); a participant cancels only unpaid/free registrations (`canUserCancelRegistration` in `lib/training/status.ts`), paid ones go through the coach (refund/transfer in `/admin/payments`). Only announcement cards register/pay/cancel; reschedule/cancel cards link to the announcement.
+- **Scheduled publishing**: `status = published` + future `published_at`. Anything shown to readers must use `livePostCondition()` / `isPostLive()` from `lib/feed/publication.ts`, not `status = published`. `lib/feed/scheduled-publisher.ts` (started in `instrumentation.ts`, 30 s tick) only pushes SSE events and applies the pin at release time.
+- Training ↔ posts: posts reference the training via `feed_posts.related_session_id` (announcement, reschedule, cancel; max one announcement per training). Training changes are logged in `training_session_events`.
+- Local dev: `pnpm run task -- dev-up` — Postgres + **Next.js in Docker** (profile **oval-dev**, PG **5433**, app **3000**). Compose [`.docker/`](../../.docker/); [`scripts/task.ts`](../../scripts/task.ts) / [`Makefile`](../../Makefile).
+- VPS prod: [`.deploy/`](../../.deploy/) + GitHub Actions `deploy-vps.yml` (GHCR, SSH, Traefik); см. [`.deploy/README.md`](../../.deploy/README.md).
+- Integration stack: **oval-integration** (`pnpm run task -- test-integration`); e2e задел: **oval-e2e** + mailpit (`pnpm run task -- e2e-up`).
+- Payments: `lib/payments/`, webhook `app/api/webhooks/payment/[provider]/route.ts`, docs [`docs/engineering/payments.md`](../../docs/engineering/payments.md). Mock confirm — admin only.
+
+## Roles
+
+- Default `user`; promote via `pnpm run user:role -- <email> editor|admin` after first email login.
+- Better Auth **admin** plugin: `adminRoles: ["admin"]`; `/admin` allows **editor** and **admin** (product RBAC in `lib/auth/roles.ts`).

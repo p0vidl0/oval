@@ -1,0 +1,123 @@
+name: Deploy VPS
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.image_ref.outputs.image }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push image
+        id: docker_push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: .deploy/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Image reference for deploy
+        id: image_ref
+        run: echo "image=ghcr.io/${{ github.repository }}@${{ steps.docker_push.outputs.digest }}" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Start ssh-agent
+        uses: webfactory/ssh-agent@v0.10.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: Configure SSH known_hosts
+        env:
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          if [ -n "$SSH_KNOWN_HOSTS" ]; then
+            echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          fi
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Upload compose files and restart stack
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PATH: ${{ secrets.SSH_PATH }}
+          OVAL_IMAGE: ${{ needs.build-and-push.outputs.image }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          PAYMENT_WEBHOOK_SECRET: ${{ secrets.PAYMENT_WEBHOOK_SECRET }}
+          TELEGRAM_OIDC_CLIENT_ID: ${{ secrets.TELEGRAM_OIDC_CLIENT_ID }}
+          TELEGRAM_OIDC_CLIENT_SECRET: ${{ secrets.TELEGRAM_OIDC_CLIENT_SECRET }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_BOT_USERNAME: ${{ secrets.TELEGRAM_BOT_USERNAME }}
+          TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+        run: |
+          set -euo pipefail
+          REMOTE_DIR="${SSH_PATH%/}"
+          COMPOSE_ENV=(--env-file config.env --env-file secrets.env)
+          {
+            echo "OVAL_IMAGE=${OVAL_IMAGE}"
+            echo "DATABASE_URL=${DATABASE_URL}"
+            echo "BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}"
+            [ -n "${SMTP_USER:-}" ] && echo "SMTP_USER=${SMTP_USER}"
+            [ -n "${SMTP_PASS:-}" ] && echo "SMTP_PASS=${SMTP_PASS}"
+            echo "PAYMENT_WEBHOOK_SECRET=${PAYMENT_WEBHOOK_SECRET}"
+            [ -n "${TELEGRAM_OIDC_CLIENT_ID:-}" ] && echo "TELEGRAM_OIDC_CLIENT_ID=${TELEGRAM_OIDC_CLIENT_ID}"
+            [ -n "${TELEGRAM_OIDC_CLIENT_SECRET:-}" ] && echo "TELEGRAM_OIDC_CLIENT_SECRET=${TELEGRAM_OIDC_CLIENT_SECRET}"
+            [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && echo "TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}"
+            [ -n "${TELEGRAM_BOT_USERNAME:-}" ] && echo "TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME}"
+            [ -n "${TELEGRAM_WEBHOOK_SECRET:-}" ] && echo "TELEGRAM_WEBHOOK_SECRET=${TELEGRAM_WEBHOOK_SECRET}"
+          } > secrets.env
+          ssh "${SSH_USER}@${SSH_HOST}" "mkdir -p '${REMOTE_DIR}'"
+          scp .deploy/config.env .deploy/docker-compose.yaml secrets.env "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/"
+          ssh "${SSH_USER}@${SSH_HOST}" "cd '${REMOTE_DIR}' && docker-compose -f docker-compose.yaml ${COMPOSE_ENV[*]} pull && docker-compose -f docker-compose.yaml ${COMPOSE_ENV[*]} up -d"

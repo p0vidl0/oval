@@ -1,0 +1,1 @@
+ALTER TABLE "training_sessions" DROP COLUMN "feed_post_id";

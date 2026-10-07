@@ -1,0 +1,24 @@
+# Postgres for local dev / integration / e2e (isolated via COMPOSE_PROJECT_NAME + profile ports).
+# Usage: pnpm run task -- infra-up
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "${OVAL_PG_HOST_PORT}:5432"
+    environment:
+      POSTGRES_USER: oval
+      POSTGRES_PASSWORD: ${OVAL_DB_PASSWORD:-oval}
+      POSTGRES_DB: oval
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U oval -d oval"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  postgres_data:

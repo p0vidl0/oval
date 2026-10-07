@@ -1,0 +1,38 @@
+---
+description: How to run and read long shell commands (docker, build, e2e)
+alwaysApply: true
+---
+
+# Long shell commands
+
+## Do not
+
+- Pipe a long command into `tail`/`head` in the same Shell call when you need exit code and full wait.
+- Re-run the same command if the user says it already finished — read the terminal file.
+- Use short `block_until_ms` for `docker compose up`, full `pnpm run build`, or future e2e without backgrounding.
+
+## Patterns
+
+### 1. Log file (preferred)
+
+```bash
+LOG=/tmp/oval-build.log
+pnpm run build >"$LOG" 2>&1; ec=$?
+echo "exit_code=$ec"
+tail -n 40 "$LOG"
+exit $ec
+```
+
+### 2. Background + terminal file
+
+`block_until_ms: 0`, then read `terminals/<id>.txt` for `exit_code`.
+
+## `block_until_ms` guide
+
+| Command | Minimum |
+|---------|---------|
+| `pnpm run build` | 300000 (5m) |
+| `docker compose up --wait` | 120000 |
+| `pnpm run db:migrate` | 60000 |
+
+Report: command, exit code, what you inspected.

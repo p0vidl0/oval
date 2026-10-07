@@ -1,0 +1,5 @@
+# Dev stack: Postgres + Next.js (container). Usage: pnpm run task -- dev-up
+
+include:
+  - path: compose.infra.yaml
+  - path: compose.app.dev.yaml

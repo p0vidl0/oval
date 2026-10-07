@@ -1,0 +1,35 @@
+# VPS: Traefik (external) → Next.js.
+# Config: config.env (repo). Secrets: secrets.env (GitHub Actions).
+services:
+  oval:
+    image: ${OVAL_IMAGE}
+    restart: unless-stopped
+    env_file:
+      - path: config.env
+        required: true
+      - path: secrets.env
+        required: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.oval.rule=Host(`${OVAL_DOMAIN}`)"
+      - "traefik.http.routers.oval.entrypoints=websecure"
+      - "traefik.http.routers.oval.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-myresolver}"
+      - "traefik.http.routers.oval.tls.domains[0].main=${OVAL_DOMAIN}"
+      - "traefik.http.routers.oval.middlewares=oval-compress"
+      - "traefik.http.middlewares.oval-compress.compress=true"
+      - "traefik.http.services.oval.loadbalancer.server.port=3000"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+    networks:
+      traefik:
+        aliases:
+          - oval
+
+networks:
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:-theta-brige}

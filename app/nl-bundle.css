@@ -1,0 +1,618 @@
+/* Ночная лига — стили компонентов (.nl-*), значения из app/tokens.css */
+
+.nl-root {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.nl-display {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.95;
+  text-wrap: balance;
+}
+.nl-mono {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.nl-button:focus-visible,
+.nl-chip:focus-visible,
+.nl-input:focus-visible,
+.nl-tab:focus-visible,
+.nl-gallery__more:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+/* Button */
+.nl-button {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: var(--control-md);
+  padding: 0 var(--space-6);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.nl-button--primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ink-inverse);
+  font-weight: 700;
+}
+.nl-button--inverse {
+  background: var(--bg);
+  border-color: var(--bg);
+  color: var(--ink);
+  font-weight: 700;
+}
+.nl-button--lg {
+  height: var(--control-lg);
+  padding: 0 28px;
+  font-size: 16px;
+}
+.nl-button--sm {
+  height: var(--control-sm);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+.nl-button--text {
+  height: var(--control-sm);
+  padding: 0;
+  border-color: transparent;
+  color: var(--ink-2);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.nl-button--block {
+  width: 100%;
+}
+.nl-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+.nl-button--pending {
+  opacity: 1;
+}
+.nl-button__spinner {
+  flex: none;
+  box-sizing: border-box;
+  width: 1.05em;
+  height: 1.05em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: nl-button-spin 0.65s linear infinite;
+}
+@keyframes nl-button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Chip */
+.nl-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-sm);
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink-2);
+  font-family: var(--font-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.nl-chip[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ink-inverse);
+}
+.nl-chip--mono {
+  padding: 0 var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 500;
+}
+.nl-chip--mono[aria-pressed="true"] {
+  font-weight: 700;
+}
+
+/* Tag */
+.nl-tag {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.nl-tag--training {
+  background: var(--signal-tint);
+  color: var(--signal);
+}
+.nl-tag--next {
+  background: var(--signal);
+  color: var(--ink-inverse);
+}
+.nl-tag--cancel {
+  background: var(--cancel-tint);
+  color: var(--cancel);
+}
+.nl-tag--move {
+  background: var(--neutral-tint);
+  color: var(--ink);
+}
+.nl-tag--race {
+  background: var(--ink);
+  color: var(--ink-inverse);
+}
+.nl-tag--news {
+  border: 1px solid var(--line-strong);
+  color: var(--ink-2);
+}
+.nl-tag--admin {
+  height: 24px;
+  padding: 0 8px;
+  background: var(--signal);
+  color: var(--ink-inverse);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.nl-tag--plain {
+  background: var(--ink);
+  color: var(--ink-inverse);
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.nl-tag--cover-meta {
+  background: var(--scrim-soft);
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Status */
+.nl-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-text);
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.nl-status__dot {
+  flex: none;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.nl-status--due {
+  color: var(--signal);
+}
+.nl-status--cancelled {
+  color: var(--cancel);
+}
+.nl-status--draft {
+  color: var(--ink-2);
+}
+.nl-status--draft .nl-status__dot {
+  background: transparent;
+  border: 1.5px solid var(--ink-muted);
+}
+
+/* DateStack */
+.nl-datestack {
+  flex: none;
+  box-sizing: border-box;
+  width: 84px;
+  margin: 12px 0;
+  padding: 8px 0;
+  border-top: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: skewY(var(--skew-date));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 0.9;
+  color: var(--ink);
+}
+.nl-datestack__dow,
+.nl-datestack__month {
+  font-size: 20px;
+  letter-spacing: 0.06em;
+}
+.nl-datestack__day {
+  font-size: 60px;
+}
+.nl-datestack--lg {
+  width: 112px;
+  margin: 16px 0;
+  padding: 10px 0;
+}
+.nl-datestack--lg .nl-datestack__dow,
+.nl-datestack--lg .nl-datestack__month {
+  font-size: 24px;
+}
+.nl-datestack--lg .nl-datestack__day {
+  font-size: 88px;
+}
+.nl-datestack--sm {
+  width: 72px;
+  margin: 10px 0;
+  padding: 6px 0;
+}
+.nl-datestack--sm .nl-datestack__dow,
+.nl-datestack--sm .nl-datestack__month {
+  font-size: 18px;
+}
+.nl-datestack--sm .nl-datestack__day {
+  font-size: 52px;
+}
+.nl-datestack--cancelled {
+  color: var(--cancel);
+}
+.nl-datestack--cancelled .nl-datestack__day {
+  text-decoration: line-through;
+  text-decoration-thickness: 4px;
+}
+
+/* TimeChange */
+.nl-timechange {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+.nl-timechange__old {
+  font-size: 18px;
+  color: var(--ink-muted);
+  text-decoration: line-through;
+}
+.nl-timechange__arrow {
+  flex: none;
+  color: var(--ink-muted);
+}
+.nl-timechange__new {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
+  background: var(--signal);
+  color: var(--ink-inverse);
+  font-size: 22px;
+}
+
+/* Progress */
+.nl-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 420px;
+  font-family: var(--font-text);
+}
+.nl-progress__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.nl-progress__left {
+  font-weight: 600;
+  color: var(--signal);
+}
+.nl-progress__track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--track);
+  overflow: hidden;
+}
+.nl-progress__fill {
+  height: 100%;
+  background: var(--signal);
+}
+
+/* Field */
+.nl-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font-family: var(--font-text);
+}
+.nl-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.nl-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--control-md);
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-inset);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.nl-input::placeholder {
+  color: var(--placeholder);
+}
+.nl-input--mono {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+.nl-input--xl {
+  height: var(--control-xl);
+  padding: 0 var(--space-4);
+  background: var(--surface-bar);
+  font-size: 18px;
+}
+textarea.nl-input {
+  height: auto;
+  min-height: 120px;
+  padding: 12px 14px;
+  resize: vertical;
+}
+.nl-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--control-md);
+  font-family: var(--font-text);
+  font-size: 16px;
+  color: var(--ink);
+}
+.nl-check input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--signal);
+}
+
+/* PostCard */
+.nl-card {
+  /* Раскладка карточки зависит от её ширины, а не от окна (лента, превью в админке). */
+  container: nl-card / inline-size;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  border-radius: var(--radius-2xl);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: var(--font-text);
+}
+.nl-card--pinned {
+  border-color: var(--ink);
+}
+.nl-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+.nl-card__body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-4) var(--space-6);
+}
+.nl-card__side-photo {
+  flex: 0 1 clamp(120px, 34%, 280px);
+  min-width: 0;
+  align-self: stretch;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: var(--surface-bar);
+}
+.nl-card__side-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 168px;
+  object-fit: cover;
+  cursor: pointer;
+}
+/*
+ * Узкая карточка (телефон, узкая колонка): дата и заголовок в одной строке,
+ * время, текст, прогресс и фото — ниже на всю ширину.
+ * `.nl-card__text` растворяется (display: contents), его дети становятся ячейками сетки.
+ */
+@container nl-card (max-width: 600px) {
+  .nl-card__body {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px var(--space-4);
+  }
+  .nl-card__body > .nl-card__text {
+    display: contents;
+  }
+  .nl-card__body > *,
+  .nl-card__body > .nl-card__text > * {
+    grid-column: 1 / -1;
+  }
+  .nl-card__body > .nl-datestack {
+    grid-column: 1;
+  }
+  .nl-card__body > .nl-datestack + .nl-card__text > :first-child {
+    grid-column: 2;
+  }
+  .nl-card__side-photo {
+    max-height: 220px;
+  }
+}
+.nl-card__text {
+  flex: 1 1 240px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nl-card__title {
+  font-weight: 400;
+  font-size: clamp(28px, 4vw, 36px);
+  line-height: 0.98;
+  /* Длинное слово не распирает карточку: перенос по слогам, в крайнем случае — по буквам. */
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+.nl-card__time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 15px;
+}
+.nl-card__p {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  text-wrap: pretty;
+  /* Переносы строк — как в редакторе (лишние пробелы схлопываются). */
+  white-space: pre-line;
+}
+.nl-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+/* PhotoGallery */
+.nl-gallery {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 6px;
+  aspect-ratio: 2 / 1;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.nl-gallery__tile {
+  position: relative;
+  background: var(--surface-bar);
+}
+.nl-gallery__tile--main {
+  grid-row: 1 / 3;
+}
+.nl-gallery__tile img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.nl-gallery__more {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: var(--scrim-soft);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(32px, 5vw, 52px);
+  line-height: 1;
+  cursor: pointer;
+}
+.nl-photo {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+}
+
+/* TabBar */
+.nl-tabbar {
+  box-sizing: border-box;
+  display: flex;
+  gap: var(--space-1);
+  /* Снизу — как сверху, плюс безопасная зона жеста «домой» на iPhone. */
+  padding: var(--space-2) var(--space-3)
+    calc(var(--space-2) + env(safe-area-inset-bottom));
+  background: var(--surface-bar);
+  border-top: 1px solid var(--line);
+}
+.nl-tab {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  height: var(--control-lg);
+  border-radius: var(--radius-md);
+  color: var(--ink-muted);
+  font-family: var(--font-text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+}
+.nl-tab[aria-current="page"] {
+  background: var(--neutral-tint);
+  color: var(--ink);
+  font-weight: 700;
+}

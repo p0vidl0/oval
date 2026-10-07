@@ -1,0 +1,1 @@
+ALTER TABLE "training_sessions" ALTER COLUMN "capacity" SET DEFAULT 25;

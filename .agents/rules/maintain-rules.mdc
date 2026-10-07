@@ -1,0 +1,19 @@
+---
+description: Keep .agents/rules up to date with repo workflow patterns
+alwaysApply: true
+---
+
+# Maintain agent rules
+
+When a recurring pattern or workflow changes, **update the matching rule in `.agents/rules/` in the same task**. `.cursor/rules/` are symlinks — edit files under `.agents/rules/` only.
+
+| What changed | Rule file |
+|--------------|-----------|
+| App Router pages, server/client components, auth UI | `.agents/rules/app-workflow.mdc` |
+| Drizzle schema, migrations, Better Auth config | `.agents/rules/app-workflow.mdc` |
+| Docker compose, dev/integration profiles, task runner | `.agents/rules/app-workflow.mdc`, `docs/engineering/local-dev.md` |
+| When/how to run lint·build·test before “done” | `.agents/rules/verify-before-done.mdc` |
+| Long shell (docker compose, e2e, full build) | `.agents/rules/shell-long-commands.mdc` |
+| Agent overview (human docs) | `docs/engineering/agents.md` |
+
+Rules are short checklists — do not duplicate full `PLAN.md` or README bodies here.

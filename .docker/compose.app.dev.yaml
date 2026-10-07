@@ -1,0 +1,30 @@
+# Next.js dev server in Docker (used with compose.yaml / oval-dev).
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .docker/Dockerfile.dev
+    restart: unless-stopped
+    ports:
+      - "${NEXT_DEV_HOST_PORT}:3000"
+    volumes:
+      - ..:/app
+      - dev_node_modules:/app/node_modules
+    env_file:
+      - path: env/oval-dev.env
+        required: true
+      - path: env/oval-dev.local.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://oval:${OVAL_DB_PASSWORD}@postgres:5432/oval
+      WATCHPACK_POLLING: "true"
+      CI: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/app/.docker/dev-app-entrypoint.sh"]
+    command:
+      ["pnpm", "exec", "next", "dev", "-H", "0.0.0.0", "-p", "3000"]
+
+volumes:
+  dev_node_modules:

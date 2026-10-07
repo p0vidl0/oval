@@ -1,0 +1,37 @@
+---
+description: Before reporting success — run lint and build for the touched area
+alwaysApply: true
+---
+
+# Verify before done
+
+Before saying a task is **done**, run checks for the parts of the repo you changed.
+
+## Required when
+
+Non-trivial code: auth, API routes, Drizzle schema, middleware, pages, docker/deploy.
+
+## Skip when
+
+Typo in comment/docs only, single sentence in `.mdc` / README with no behavior change.
+
+When unsure — run the checks.
+
+## Minimum (oval)
+
+| Touched | Before reporting |
+|---------|------------------|
+| `app/**`, `lib/**`, `middleware.ts` | `pnpm run task -- validate` (or lint + build) |
+| `lib/training/**`, `lib/payments/**` | + `pnpm run test:unit`; if DB behavior changed → `pnpm run task -- test-integration` |
+| `app/api/webhooks/**`, `app/api/test/**` | `pnpm run task -- test-integration` |
+| `lib/db/schema/**`, auth plugins | `pnpm run auth:generate` if Better Auth config changed; `pnpm run db:generate` if hand-edited schema; `pnpm run task -- db-migrate` or document why not |
+| `.docker/**`, `scripts/task.ts`, `.env.example` | Smoke: `pnpm run task -- dev-up` if stack changed |
+| `tests/**` | Run the suite you changed (unit / integration / e2e) |
+
+Optional before merge: `pnpm run task -- validate-full` or `pnpm run task -- test-all`. E2E: `pnpm run task -- test-e2e` (Docker + Playwright).
+
+## Reporting
+
+1. Fix failed lint/test/build first; only then say “done”.
+2. Note which commands you ran.
+3. Do not commit unless the user explicitly asks.

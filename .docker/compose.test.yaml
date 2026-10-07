@@ -1,0 +1,5 @@
+# Test stacks (integration). Same services as dev — separate COMPOSE_PROJECT_NAME + ports.
+# Usage: pnpm run task -- test-integration
+
+include:
+  - path: compose.infra.yaml
