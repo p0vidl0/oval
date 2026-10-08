@@ -14,6 +14,18 @@ import type {
   FeedPostType,
 } from "@/lib/feed/types";
 
+/** Живые посты для sitemap (без лимита списка ленты). */
+export async function listLiveFeedPostsForSitemap() {
+  return db
+    .select({
+      id: feedPosts.id,
+      updatedAt: feedPosts.updatedAt,
+    })
+    .from(feedPosts)
+    .where(livePostCondition())
+    .orderBy(desc(feedPosts.publishedAt), desc(feedPosts.id));
+}
+
 export async function listPublishedFeedPosts(options?: {
   type?: FeedPostType;
   types?: FeedPostType[];

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { FeedLiveList } from "@/components/nl/feed-live-list";
 import { FilterNav } from "@/components/nl/filter-nav";
@@ -11,11 +12,23 @@ import { FEED_FILTERS, type FeedFilterKey } from "@/lib/feed/filter";
 import { loadFeedLiveCards } from "@/lib/feed/load-feed-live-cards";
 import { listUpcomingScheduledSessions } from "@/lib/feed/queries";
 import { formatShortListDate, formatTimeHm } from "@/lib/format/datetime";
+import { siteDefaultDescription } from "@/lib/site/public-origin";
 import { listUserRegistrations } from "@/lib/training/registrations";
 
 function feedFilterHref(key: FeedFilterKey) {
   return key === "all" ? "/feed" : `/feed?filter=${key}`;
 }
+
+export const metadata: Metadata = {
+  title: "Лента",
+  description: siteDefaultDescription,
+  alternates: { canonical: "/feed" },
+  openGraph: {
+    title: "Лента",
+    description: siteDefaultDescription,
+    url: "/feed",
+  },
+};
 
 type Props = {
   searchParams: Promise<{ filter?: string }>;

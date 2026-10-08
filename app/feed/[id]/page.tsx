@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CancelRegistrationForm } from "@/components/nl/cancel-registration-form";
@@ -19,6 +20,7 @@ import {
   formatTimeHm,
   formatWeekdayInPhrase,
 } from "@/lib/format/datetime";
+import { metaDescriptionFromBody } from "@/lib/site/public-origin";
 import {
   isRegistrationOpen,
   REGISTRATION_BLOCK_MESSAGES,
@@ -38,6 +40,49 @@ type Props = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ error?: string; registered?: string }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const post = await getPublishedFeedPostById(id);
+  if (!post) {
+    return { title: "Не найдено" };
+  }
+
+  const description = metaDescriptionFromBody(post.body);
+  const images = await listImagesForPost(post.id);
+  const cover = images[0];
+  const coverUrl = cover ? uploadPublicUrl(cover.storageKey) : undefined;
+  const publishedTime = (post.publishedAt ?? post.createdAt).toISOString();
+
+  return {
+    title: post.title,
+    description,
+    alternates: { canonical: `/feed/${post.id}` },
+    openGraph: {
+      title: post.title,
+      description,
+      type: "article",
+      publishedTime,
+      url: `/feed/${post.id}`,
+      ...(coverUrl
+        ? {
+            images: [
+              {
+                url: coverUrl,
+                alt: cover.alt.trim() || post.title,
+              },
+            ],
+          }
+        : {}),
+    },
+    twitter: {
+      card: coverUrl ? "summary_large_image" : "summary",
+      title: post.title,
+      description,
+      ...(coverUrl ? { images: [coverUrl] } : {}),
+    },
+  };
+}
 
 export default async function FeedPostPage({ params, searchParams }: Props) {
   const { id } = await params;
