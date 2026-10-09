@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Suspense } from "react";
+import { YandexMetrika } from "@/components/analytics/yandex-metrika";
 import { TelegramMiniAppProvider } from "@/components/telegram/telegram-mini-app-provider";
+import { getYandexMetrikaCounterId } from "@/lib/analytics/yandex-metrika";
 import { fontVariables } from "@/lib/fonts";
 import {
   getSiteMetadataBase,
@@ -26,9 +28,14 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  const yandexMetrikaCounterId = getYandexMetrikaCounterId();
+
   return (
     <html lang="ru" className={`${fontVariables} h-full`}>
       <body className="nl-root flex min-h-full flex-col">
+        {yandexMetrikaCounterId ? (
+          <YandexMetrika counterId={yandexMetrikaCounterId} />
+        ) : null}
         <Script id="tg-launch-capture" strategy="beforeInteractive">
           {telegramLaunchCaptureScript()}
         </Script>
