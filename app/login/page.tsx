@@ -71,37 +71,20 @@ export default async function LoginPage({ searchParams }: Props) {
             marginTop: "var(--space-6)",
             paddingTop: "var(--space-6)",
             borderTop: "1px solid var(--line)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-3)",
           }}
         >
-          <h2
-            className="caption"
-            style={{ fontWeight: 700, marginBottom: "var(--space-3)" }}
-          >
-            Telegram
-          </h2>
           <Suspense fallback={null}>
             <TelegramLogin oidcConfigured={oidcConfigured} />
           </Suspense>
-        </div>
-        {vkConfigured ? (
-          <div
-            style={{
-              marginTop: "var(--space-6)",
-              paddingTop: "var(--space-6)",
-              borderTop: "1px solid var(--line)",
-            }}
-          >
-            <h2
-              className="caption"
-              style={{ fontWeight: 700, marginBottom: "var(--space-3)" }}
-            >
-              VK
-            </h2>
+          {vkConfigured ? (
             <Suspense fallback={null}>
               <VkLogin />
             </Suspense>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
         <Suspense fallback={null}>
           <LoginNextPreview next={params.next} />
         </Suspense>
