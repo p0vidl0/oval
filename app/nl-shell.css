@@ -85,7 +85,7 @@ html {
 
 .nl-logo__title {
   margin: 0;
-  /* Poiret One — только название «Ночная лига»; одно начертание (400). */
+  /* Poiret One — название «Ночная лига»; одно начертание (400). */
   font-family: var(--font-poiret-one), "Poiret One", var(--font-display);
   font-weight: 400;
   font-size: 48px;
@@ -265,8 +265,13 @@ html {
 
 .nl-login-cover__title {
   margin: 0;
+  /* Тот же Poiret One, что у «Ночная лига» в шапке. Одно начертание (400). */
+  font-family: var(--font-poiret-one), "Poiret One", var(--font-display);
+  font-weight: 400;
   font-size: clamp(40px, 6vw, 72px);
   line-height: 0.95;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   max-width: 480px;
 }
 
