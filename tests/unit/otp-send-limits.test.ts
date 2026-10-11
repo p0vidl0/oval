@@ -92,7 +92,7 @@ describe("readOtpSendLimitConfig", () => {
     delete process.env.EMAIL_OTP_MAX_PER_EMAIL_PER_DAY;
     delete process.env.EMAIL_OTP_MAX_SMTP_PER_HOUR;
     expect(readOtpSendLimitConfig()).toEqual({
-      minIntervalSec: 120,
+      minIntervalSec: 60,
       maxPerEmailPerDay: 10,
       maxSmtpPerHour: 200,
     });

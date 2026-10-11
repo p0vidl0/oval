@@ -6,6 +6,7 @@ import {
   resolveBetterAuthBaseURL,
 } from "@/lib/auth/base-url-config";
 import { telegram } from "@/lib/auth/plugins/telegram";
+import { vk } from "@/lib/auth/plugins/vk";
 import { db } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import { sendAuthEmailOtp } from "@/lib/email/send-otp";
@@ -26,6 +27,12 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["vk"],
+    },
+  },
   plugins: [
     emailOTP({
       expiresIn: 600,
@@ -41,6 +48,7 @@ export const auth = betterAuth({
       adminRoles: ["admin"],
     }),
     telegram(),
+    vk(),
   ],
 });
 

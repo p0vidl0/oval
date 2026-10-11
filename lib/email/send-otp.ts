@@ -36,10 +36,14 @@ export async function sendAuthEmailOtp(
       }
     }
     const { sendViaSmtp } = await import("@/lib/email/send-via-smtp");
-    await sendViaSmtp(email, subject, text);
-    if (otpSendLimitsEnabled()) {
-      await recordOtpSend(email);
-    }
+    const limitsOn = otpSendLimitsEnabled();
+    void sendViaSmtp(email, subject, text)
+      .then(async () => {
+        if (limitsOn) await recordOtpSend(email);
+      })
+      .catch((error: unknown) => {
+        console.error("[email smtp] send failed", error);
+      });
     return;
   }
 

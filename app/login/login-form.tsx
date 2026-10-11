@@ -10,6 +10,15 @@ import { normalizeEmail } from "@/lib/auth/email";
 
 type Step = "email" | "code";
 
+function EmailUnstableNote() {
+  return (
+    <p className="caption" style={{ color: "var(--ink-muted)" }}>
+      Почта может работать нестабильно. Если код не пришёл, войдите через
+      Telegram или VK.
+    </p>
+  );
+}
+
 /** Пауза перед повторной отправкой кода. */
 const RESEND_SECONDS = 60;
 
@@ -27,6 +36,7 @@ export function LoginForm() {
   const [resendIn, setResendIn] = useState(0);
   const emailInputRef = useRef<HTMLInputElement>(null);
   const codeInputRef = useRef<HTMLInputElement>(null);
+  const sendQueued = useRef(false);
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -34,24 +44,29 @@ export function LoginForm() {
     return () => clearTimeout(timer);
   }, [resendIn]);
 
-  async function sendCode(email: string) {
-    const { error: sendError } = await authClient.emailOtp.sendVerificationOtp({
-      email,
-      type: "sign-in",
-    });
-    if (sendError) {
-      setError(authErrorText(sendError, "Не удалось отправить код"));
-      return false;
-    }
+  function queueSend(email: string) {
+    if (sendQueued.current) return;
+    sendQueued.current = true;
+    setError(null);
     setResendIn(RESEND_SECONDS);
-    return true;
+    void authClient.emailOtp
+      .sendVerificationOtp({
+        email,
+        type: "sign-in",
+      })
+      .then(({ error: sendError }) => {
+        if (sendError) {
+          setError(authErrorText(sendError, "Не удалось отправить код"));
+        }
+      })
+      .finally(() => {
+        sendQueued.current = false;
+      });
   }
 
-  async function onResend() {
-    setError(null);
-    setLoading(true);
-    await sendCode(emailNormalized);
-    setLoading(false);
+  function onResend() {
+    if (resendIn > 0) return;
+    queueSend(emailNormalized);
   }
 
   useEffect(() => {
@@ -70,12 +85,10 @@ export function LoginForm() {
       setError("Введите корректный email");
       return;
     }
-    setLoading(true);
-    const sent = await sendCode(normalized);
-    setLoading(false);
-    if (!sent) return;
+    if (resendIn > 0) return;
     setEmailNormalized(normalized);
     setStep("code");
+    queueSend(normalized);
   }
 
   async function onVerify(e: React.FormEvent) {
@@ -131,15 +144,16 @@ export function LoginForm() {
           <button
             type="submit"
             data-testid="login-submit"
-            disabled={loading}
+            disabled={resendIn > 0}
             className="nl-button nl-button--primary nl-button--block"
           >
-            {loading ? "Отправка…" : "Получить код"}
+            {resendIn > 0 ? `Получить код через ${resendIn} с` : "Получить код"}
           </button>
           <p className="caption" style={{ color: "var(--ink-muted)" }}>
             Пришлём код на почту. Если вы у нас впервые, аккаунт создадим сразу
             после подтверждения email.
           </p>
+          <EmailUnstableNote />
         </form>
       ) : (
         <form
@@ -182,7 +196,7 @@ export function LoginForm() {
           <button
             type="button"
             className="nl-button nl-button--text"
-            disabled={loading || resendIn > 0}
+            disabled={resendIn > 0}
             onClick={onResend}
           >
             {resendIn > 0
@@ -200,6 +214,7 @@ export function LoginForm() {
           >
             Другой email
           </button>
+          <EmailUnstableNote />
         </form>
       )}
 

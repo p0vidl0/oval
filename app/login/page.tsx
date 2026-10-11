@@ -3,8 +3,10 @@ import { Suspense } from "react";
 import { LoginForm } from "@/app/login/login-form";
 import { LoginNextPreview } from "@/app/login/login-next-preview";
 import { TelegramLogin } from "@/app/login/telegram-login";
+import { VkLogin } from "@/app/login/vk-login";
 import { NlLogo } from "@/components/nl/logo";
 import { isTelegramOidcConfigured } from "@/lib/auth/telegram/oidc-config";
+import { isVkConfigured } from "@/lib/auth/vk/config";
 
 type Props = {
   searchParams: Promise<{ next?: string }>;
@@ -13,6 +15,7 @@ type Props = {
 export default async function LoginPage({ searchParams }: Props) {
   const params = await searchParams;
   const oidcConfigured = isTelegramOidcConfigured();
+  const vkConfigured = isVkConfigured();
 
   return (
     <main className="nl-root nl-login-page">
@@ -50,8 +53,9 @@ export default async function LoginPage({ searchParams }: Props) {
           className="body-sm"
           style={{ color: "var(--ink-2)", marginTop: "var(--space-2)" }}
         >
-          По email или Telegram — для участников и администраторов клуба. Читать
-          ленту можно и без входа.
+          По email, Telegram
+          {vkConfigured ? " или VK" : ""} — для участников и администраторов
+          клуба. Читать ленту можно и без входа.
         </p>
         <Suspense
           fallback={
@@ -79,6 +83,25 @@ export default async function LoginPage({ searchParams }: Props) {
             <TelegramLogin oidcConfigured={oidcConfigured} />
           </Suspense>
         </div>
+        {vkConfigured ? (
+          <div
+            style={{
+              marginTop: "var(--space-6)",
+              paddingTop: "var(--space-6)",
+              borderTop: "1px solid var(--line)",
+            }}
+          >
+            <h2
+              className="caption"
+              style={{ fontWeight: 700, marginBottom: "var(--space-3)" }}
+            >
+              VK
+            </h2>
+            <Suspense fallback={null}>
+              <VkLogin />
+            </Suspense>
+          </div>
+        ) : null}
         <Suspense fallback={null}>
           <LoginNextPreview next={params.next} />
         </Suspense>

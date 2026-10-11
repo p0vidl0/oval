@@ -79,6 +79,10 @@ Prod / staging (OIDC):
 
 В dev Better Auth сам принимает origin `*.ngrok-free.dev` (и localhost) для CSRF — **403 на `/telegram/oidc/start` после `dev-restart` не должно быть**, даже если `BETTER_AUTH_URL=http://localhost:3000`.
 
+## VK ID (optional)
+
+`VK_CLIENT_ID` и `VK_CLIENT_SECRET` в `oval-dev.local.env`. В кабинете VK ID redirect URI: `https://<host>/api/auth/callback/vk` (локально — туннель с HTTPS). Без этих переменных кнопка на `/login` не показывается. Если VK отдал email, он связывается с уже существующим пользователем; если нет — аккаунт создаётся без почты.
+
 Опционально для webhook бота и явного redirect URI: **`BETTER_AUTH_URL=https://<ваш-ngrok-host>`** (без слэша) или **`NEXT_DEV_TUNNEL_HOST=<hostname>`** (без `https://`) в `oval-dev.local.env`.
 
 ### WebSocket `/_next/hmr` в консоли

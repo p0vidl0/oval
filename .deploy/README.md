@@ -34,7 +34,7 @@ Workflow: [`.github/workflows/deploy-vps.yml`](../.github/workflows/deploy-vps.y
 
 **SSH:** `SSH_HOST`, `SSH_USER`, `SSH_KEY`, `SSH_PATH`, опционально `SSH_KNOWN_HOSTS`.
 
-**Секреты приложения:** `DATABASE_URL`, `BETTER_AUTH_SECRET`, `SMTP_USER`, `SMTP_PASS`, `PAYMENT_WEBHOOK_SECRET`, опционально `TELEGRAM_*` (в т.ч. Mini App: bot token + `TELEGRAM_MINI_APP_SHORT_NAME` для deep link).
+**Секреты приложения:** `DATABASE_URL`, `BETTER_AUTH_SECRET`, `SMTP_USER`, `SMTP_PASS`, `PAYMENT_WEBHOOK_SECRET`, опционально `TELEGRAM_*` (в т.ч. Mini App: bot token + `TELEGRAM_MINI_APP_SHORT_NAME` для deep link) и `VK_CLIENT_ID` / `VK_CLIENT_SECRET` (редирект `https://<домен>/api/auth/callback/vk`).
 
 Mini App URL в BotFather — публичный `https://<OVAL_DOMAIN>/feed` (или `/`). Вход в WebView — автоматически по `initData`.
 

@@ -13,7 +13,7 @@ function readIntEnv(name: string, fallback: number): number {
 
 export function readOtpSendLimitConfig(): OtpSendLimitConfig {
   return {
-    minIntervalSec: readIntEnv("EMAIL_OTP_MIN_INTERVAL_SEC", 120),
+    minIntervalSec: readIntEnv("EMAIL_OTP_MIN_INTERVAL_SEC", 60),
     maxPerEmailPerDay: readIntEnv("EMAIL_OTP_MAX_PER_EMAIL_PER_DAY", 10),
     maxSmtpPerHour: readIntEnv("EMAIL_OTP_MAX_SMTP_PER_HOUR", 200),
   };

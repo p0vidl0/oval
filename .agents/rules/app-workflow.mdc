@@ -28,6 +28,7 @@ Stack: **Next.js App Router**, **Better Auth** (`lib/auth/`), **Drizzle** (`lib/
 - CLI / schema: root `auth.ts` re-exports auth for `pnpm run auth:generate`.
 - **Telegram channel:** autopublish при выходе поста в ленту — `publish_to_telegram` + `TELEGRAM_CHANNEL_ID`, `lib/bots/telegram/publish-feed-post.ts`. Исходящий Bot API: `lib/bots/telegram/api.ts`, опц. **`TELEGRAM_API_ROOT`** (proxy).
 - **Telegram login:** OIDC (`TELEGRAM_OIDC_*`) — `/telegram/oidc/start`, `/sign-in/telegram/oidc`, GET `/sign-in/telegram/oidc/callback`; bot deep link — `/telegram/login-intent`, `/sign-in/telegram/bot`; webhook `app/api/webhooks/telegram/route.ts`. **Mini App:** `POST /sign-in/telegram/mini-app` (`initData`, `TELEGRAM_BOT_TOKEN`), клиент [`components/telegram/telegram-mini-app-provider.tsx`](../../components/telegram/telegram-mini-app-provider.tsx), deep link `start_param` — [`lib/telegram/mini-app-start-param.ts`](../../lib/telegram/mini-app-start-param.ts), опц. `TELEGRAM_MINI_APP_SHORT_NAME`. `user.email` nullable для TG-first.
+- **VK ID:** `VK_CLIENT_ID` + `VK_CLIENT_SECRET`. Кнопка на `/login` скрыта без них. Старт `POST /vk/oauth/start`, callback `GET /callback/vk` (редирект `https://<host>/api/auth/callback/vk`). Есть email — привязка к существующему пользователю; нет — `email: null`, `providerId: vk`.
 
 ## Database
 

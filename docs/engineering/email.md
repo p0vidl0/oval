@@ -28,13 +28,15 @@ SMTP_FROM=noreply@your-verified-domain.ru
 
 Configure SPF, DKIM, DMARC for the sending domain in Yandex Cloud. Use a dedicated subdomain for transactional mail when possible.
 
+SMTP delivery does not block the auth response: the OTP is stored, the HTTP handler returns, and the relay send continues in the background (`connectionTimeout` / `socketTimeout` 10s). A hung Postbox does not hold the login request. Failures are logged as `[email smtp]`. `stub` and `recording` stay synchronous.
+
 ### OTP send limits (SMTP only)
 
 Applied when `EMAIL_PROVIDER=smtp` and `OVAL_TEST_API` is not `1`:
 
 | Env | Default | Meaning |
 |-----|---------|---------|
-| `EMAIL_OTP_MIN_INTERVAL_SEC` | `120` | Min gap between sends to the same email |
+| `EMAIL_OTP_MIN_INTERVAL_SEC` | `60` | Min gap between sends to the same email |
 | `EMAIL_OTP_MAX_PER_EMAIL_PER_DAY` | `10` | Max sends per email per 24h |
 | `EMAIL_OTP_MAX_SMTP_PER_HOUR` | `200` | Global cap per hour (emergency) |
 

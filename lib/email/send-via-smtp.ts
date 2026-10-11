@@ -24,6 +24,9 @@ function smtpTransportOptions() {
       port,
       secure,
       auth: user && pass ? { user, pass } : undefined,
+      connectionTimeout: 10_000,
+      greetingTimeout: 10_000,
+      socketTimeout: 10_000,
       ...(localDevRelay ? { tls: { rejectUnauthorized: false } } : {}),
     },
   };
