@@ -271,6 +271,50 @@ export const trainingSessionEvents = pgTable(
   ],
 );
 
+export type AnalyticsEventProps = {
+  postId?: string;
+  sessionId?: string;
+  registrationId?: string;
+  paymentId?: string;
+  amountCents?: number;
+  authMethod?: string;
+};
+
+/** First-party и server-side события для admin /admin/analytics. */
+export const analyticsEvents = pgTable(
+  "analytics_events",
+  {
+    id: text("id").primaryKey(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    name: text("name").notNull(),
+    source: text("source").notNull(),
+    visitorId: text("visitor_id"),
+    path: text("path"),
+    referrer: text("referrer"),
+    utmSource: text("utm_source"),
+    utmMedium: text("utm_medium"),
+    utmCampaign: text("utm_campaign"),
+    utmContent: text("utm_content"),
+    utmTerm: text("utm_term"),
+    isMiniApp: boolean("is_mini_app"),
+    deviceClass: text("device_class").notNull().default("unknown"),
+    props: jsonb("props").$type<AnalyticsEventProps>().default({}),
+  },
+  (table) => [
+    index("analytics_events_occurred_at_idx").on(table.occurredAt),
+    index("analytics_events_name_occurred_at_idx").on(
+      table.name,
+      table.occurredAt,
+    ),
+    index("analytics_events_path_occurred_at_idx").on(
+      table.path,
+      table.occurredAt,
+    ),
+  ],
+);
+
 /** Audit of OTP emails sent via SMTP (rate-limit / quota protection). */
 export const emailOtpSendLog = pgTable(
   "email_otp_send_log",

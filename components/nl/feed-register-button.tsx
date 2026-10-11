@@ -4,6 +4,7 @@ import { isRedirectError } from "next/dist/client/components/redirect-error";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { NamePromptDialog } from "@/components/nl/name-prompt-dialog";
+import { trackAnalyticsEvent } from "@/lib/analytics/client-track";
 import { registerForTrainingClient } from "@/lib/training/register-action";
 
 type Props = {
@@ -61,6 +62,10 @@ export function FeedRegisterButton({
         disabled={pending}
         aria-busy={pending}
         onClick={() => {
+          trackAnalyticsEvent("register_click", {
+            path: `/feed/${postId}`,
+            props: { postId, sessionId },
+          });
           if (needsName && !nameSaved) {
             setAskName(true);
             return;

@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Suspense } from "react";
-import { YandexMetrika } from "@/components/analytics/yandex-metrika";
+import { AnalyticsConsentBanner } from "@/components/analytics/analytics-consent-banner";
+import { AnalyticsScripts } from "@/components/analytics/analytics-scripts";
 import { TelegramMiniAppProvider } from "@/components/telegram/telegram-mini-app-provider";
+import { isOvalAnalyticsEnabled } from "@/lib/analytics/config";
+import { AnalyticsConsentProvider } from "@/lib/analytics/consent-context";
 import { getYandexMetrikaCounterId } from "@/lib/analytics/yandex-metrika";
 import { fontVariables } from "@/lib/fonts";
 import {
@@ -29,19 +32,30 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   const yandexMetrikaCounterId = getYandexMetrikaCounterId();
+  const ovalAnalyticsEnabled = isOvalAnalyticsEnabled();
+  const showAnalyticsUi =
+    ovalAnalyticsEnabled || yandexMetrikaCounterId !== null;
 
   return (
     <html lang="ru" className={`${fontVariables} h-full`}>
       <body className="nl-root flex min-h-full flex-col">
-        {yandexMetrikaCounterId ? (
-          <YandexMetrika counterId={yandexMetrikaCounterId} />
-        ) : null}
-        <Script id="tg-launch-capture" strategy="beforeInteractive">
-          {telegramLaunchCaptureScript()}
-        </Script>
-        <Suspense fallback={null}>
-          <TelegramMiniAppProvider>{children}</TelegramMiniAppProvider>
-        </Suspense>
+        <AnalyticsConsentProvider>
+          {showAnalyticsUi ? <AnalyticsConsentBanner /> : null}
+          {showAnalyticsUi ? (
+            <Suspense fallback={null}>
+              <AnalyticsScripts
+                yandexMetrikaCounterId={yandexMetrikaCounterId}
+                ovalAnalyticsEnabled={ovalAnalyticsEnabled}
+              />
+            </Suspense>
+          ) : null}
+          <Script id="tg-launch-capture" strategy="beforeInteractive">
+            {telegramLaunchCaptureScript()}
+          </Script>
+          <Suspense fallback={null}>
+            <TelegramMiniAppProvider>{children}</TelegramMiniAppProvider>
+          </Suspense>
+        </AnalyticsConsentProvider>
       </body>
     </html>
   );

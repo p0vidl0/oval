@@ -28,6 +28,7 @@ export default async function AdminLayout({
           <Link href="/admin/posts">Публикации</Link>
           <Link href="/admin/registrations">Участники</Link>
           <Link href="/admin/payments">Оплата</Link>
+          <Link href="/admin/analytics">Статистика</Link>
         </nav>
         {children}
       </div>

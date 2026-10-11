@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { recordServerEvent } from "@/lib/analytics/record-event";
 import { db } from "@/lib/db/client";
 import {
   payments,
@@ -100,6 +101,17 @@ export async function confirmPaymentSucceeded(params: {
   if (sessionId) {
     await publishSessionRegistrationsChanged(sessionId);
   }
+
+  await recordServerEvent({
+    name: "payment_success",
+    path: `/cabinet/pay/${payment.registrationId}`,
+    props: {
+      paymentId: payment.id,
+      registrationId: payment.registrationId,
+      sessionId,
+      amountCents: payment.amountCents,
+    },
+  });
 
   return { ok: true, alreadyProcessed: false, paymentId: payment.id };
 }

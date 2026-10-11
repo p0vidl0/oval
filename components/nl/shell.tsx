@@ -83,6 +83,11 @@ export async function NlShell({
       <div className="nl-tabbar-desktop-hide flex flex-1 flex-col">
         {children}
       </div>
+      <footer className="nl-site-footer">
+        <Link href="/privacy" className="nl-site-footer__link">
+          Конфиденциальность
+        </Link>
+      </footer>
       <nav className="nl-tabbar" aria-label="Разделы">
         <Link
           href="/feed"

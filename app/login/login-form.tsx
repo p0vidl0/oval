@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { trackAnalyticsEvent } from "@/lib/analytics/client-track";
 import { authErrorText } from "@/lib/auth/auth-error-text";
 import { authClient } from "@/lib/auth/client";
 import { normalizeEmail } from "@/lib/auth/email";
@@ -92,6 +93,10 @@ export function LoginForm() {
       );
       return;
     }
+    trackAnalyticsEvent("login_success", {
+      path: "/login",
+      props: { authMethod: "email_otp" },
+    });
     router.push(next);
     router.refresh();
   }

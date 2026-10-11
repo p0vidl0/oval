@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { recordServerEvent } from "@/lib/analytics/record-event";
 import { getServerSession } from "@/lib/auth/session";
 import { publishSessionRegistrationsChanged } from "@/lib/realtime/publish-session-registrations-changed";
 import { registerUserForSession } from "@/lib/training/registrations";
@@ -37,6 +38,16 @@ export async function registerForTrainingClient(
   revalidatePath("/cabinet");
 
   await publishSessionRegistrationsChanged(result.sessionId);
+
+  await recordServerEvent({
+    name: "registration_complete",
+    path: feedPostId ? `/feed/${feedPostId}` : "/feed",
+    props: {
+      registrationId: result.registrationId,
+      sessionId: result.sessionId,
+      postId: feedPostId,
+    },
+  });
 
   if (result.needsPayment) {
     redirect(`/cabinet/pay/${result.registrationId}`);

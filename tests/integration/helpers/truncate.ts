@@ -5,6 +5,7 @@ import { db } from "@/lib/db/client";
 export async function truncateAppTables() {
   await db.execute(sql`
     TRUNCATE TABLE
+      analytics_events,
       payment_webhook_deliveries,
       training_session_events,
       payments,

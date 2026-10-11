@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { PaymentCheckoutTracker } from "@/components/analytics/payment-checkout-tracker";
 import { NlShell } from "@/components/nl/shell";
 import { NlStatus } from "@/components/nl/status";
 import { getServerSession } from "@/lib/auth/session";
@@ -35,6 +36,10 @@ export default async function CheckoutPage({ params }: Props) {
 
   return (
     <NlShell tab="cabinet">
+      <PaymentCheckoutTracker
+        registrationId={registrationId}
+        sessionId={training.id}
+      />
       <main className="nl-page" style={{ maxWidth: 520 }}>
         <Link
           href="/cabinet"

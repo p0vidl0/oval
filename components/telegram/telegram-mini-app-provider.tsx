@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { trackAnalyticsEvent } from "@/lib/analytics/client-track";
 import { authErrorText } from "@/lib/auth/auth-error-text";
 import { authClient } from "@/lib/auth/client";
 import {
@@ -182,6 +183,12 @@ export function TelegramMiniAppProvider({ children }: { children: ReactNode }) {
           session = await authClient.getSession();
         }
         if (cancelled || !session.data?.session) return;
+
+        trackAnalyticsEvent("login_success", {
+          path: pathnameRef.current || "/feed",
+          isMiniApp: true,
+          props: { authMethod: "telegram_mini_app" },
+        });
 
         const next = nextRef.current;
         if (pathnameRef.current === "/login" && next?.startsWith("/")) {
