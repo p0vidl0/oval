@@ -11,11 +11,14 @@ export async function updateProfileName(formData: FormData) {
   if (!session) throw new Error("Forbidden");
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Укажите имя");
+  const rosterNameVisible =
+    String(formData.get("roster_name_visible") ?? "visible") !== "hidden";
   await db
     .update(user)
-    .set({ name, updatedAt: new Date() })
+    .set({ name, rosterNameVisible, updatedAt: new Date() })
     .where(eq(user.id, session.user.id));
   revalidatePath("/cabinet");
+  revalidatePath("/feed", "layout");
 }
 
 /** Имя перед первой записью на тренировку (окно «Как вас записать?»). */

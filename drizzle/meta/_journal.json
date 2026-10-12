@@ -78,6 +78,13 @@
       "when": 1791737335002,
       "tag": "0010_demonic_zaladane",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791800000000,
+      "tag": "0011_user_roster_name_visible",
+      "breakpoints": true
     }
   ]
 }

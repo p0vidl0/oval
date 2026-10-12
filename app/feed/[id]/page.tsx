@@ -6,6 +6,7 @@ import { NlFeedPostCard } from "@/components/nl/feed-post-card";
 import { PostRegisterButton } from "@/components/nl/post-register-button";
 import { NlShell } from "@/components/nl/shell";
 import { NlStatus } from "@/components/nl/status";
+import { TrainingRoster } from "@/components/nl/training-roster";
 import { getServerSession } from "@/lib/auth/session";
 import { changePostUserNote } from "@/lib/feed/feed-live-card";
 import { listImagesForPost } from "@/lib/feed/post-images";
@@ -29,6 +30,7 @@ import {
   countActiveRegistrations,
   getUserRegistrationAnyStatus,
   getUserRegistrationForSession,
+  listPublicRoster,
 } from "@/lib/training/registrations";
 import {
   canUserCancelRegistration,
@@ -102,6 +104,8 @@ export default async function FeedPostPage({ params, searchParams }: Props) {
   let cardExtra: React.ReactNode = null;
   if (training && post.type === "training_announcement") {
     const activeCount = await countActiveRegistrations(training.id);
+    const roster = await listPublicRoster(training.id);
+    const showRosterSection = roster.length > 0 || training.registrationEnabled;
     const userReg = session
       ? await getUserRegistrationForSession(session.user.id, training.id)
       : null;
@@ -243,6 +247,16 @@ export default async function FeedPostPage({ params, searchParams }: Props) {
                 }}
               />
               {cardExtra}
+              {showRosterSection ? (
+                <TrainingRoster
+                  entries={roster}
+                  emptyMessage={
+                    training.registrationEnabled
+                      ? "Пока никто не записался"
+                      : undefined
+                  }
+                />
+              ) : null}
             </div>
             {/* Пустая колонка — карточка той же ширины, что в ленте. */}
             <aside className="nl-feed-aside" aria-hidden="true" />

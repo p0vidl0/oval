@@ -1,3 +1,4 @@
+import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SignOutButton } from "@/app/cabinet/sign-out-button";
@@ -8,6 +9,8 @@ import { NlStatus } from "@/components/nl/status";
 import { getServerSession } from "@/lib/auth/session";
 import { historyStatus } from "@/lib/cabinet/history-status";
 import { updateProfileName } from "@/lib/cabinet/profile-actions";
+import { db } from "@/lib/db/client";
+import { user } from "@/lib/db/schema/auth-schema";
 import { getPreviousStartByRescheduledSessions } from "@/lib/feed/queries";
 import {
   formatPriceRub,
@@ -50,6 +53,13 @@ export default async function CabinetPage({ searchParams }: Props) {
 
   const displayName = session.user.name?.trim() || "Участник";
   const mobileTitle = displayShortName(displayName);
+
+  const profileRows = await db
+    .select({ rosterNameVisible: user.rosterNameVisible })
+    .from(user)
+    .where(eq(user.id, session.user.id))
+    .limit(1);
+  const rosterNameVisible = profileRows[0]?.rosterNameVisible ?? true;
 
   const registrations = await listUserRegistrations(session.user.id);
   const history = await listUserRegistrationHistory(session.user.id);
@@ -313,6 +323,34 @@ export default async function CabinetPage({ searchParams }: Props) {
                       {session.user.email?.trim() || "Email не указан"}
                     </span>
                   </p>
+                  <fieldset className="nl-field nl-cabinet-roster-visibility">
+                    <legend className="nl-label">Имя в списке</legend>
+                    <div className="nl-segmented">
+                      <label className="nl-segmented__item">
+                        <input
+                          type="radio"
+                          className="nl-segmented__input"
+                          name="roster_name_visible"
+                          value="visible"
+                          defaultChecked={rosterNameVisible}
+                        />
+                        <span className="nl-segmented__text">Отображать</span>
+                      </label>
+                      <label className="nl-segmented__item">
+                        <input
+                          type="radio"
+                          className="nl-segmented__input"
+                          name="roster_name_visible"
+                          value="hidden"
+                          defaultChecked={!rosterNameVisible}
+                        />
+                        <span className="nl-segmented__text">Скрыть</span>
+                      </label>
+                    </div>
+                    <p className="caption nl-cabinet-roster-visibility__hint">
+                      Список участников виден на странице анонса.
+                    </p>
+                  </fieldset>
                   <button
                     type="submit"
                     className="nl-button nl-button--primary nl-button--block"

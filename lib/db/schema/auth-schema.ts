@@ -18,6 +18,7 @@ export const user = pgTable("user", {
   banned: boolean("banned").default(false),
   banReason: text("ban_reason"),
   banExpires: timestamp("ban_expires"),
+  rosterNameVisible: boolean("roster_name_visible").default(true).notNull(),
 });
 
 export const session = pgTable(

@@ -23,6 +23,7 @@
 .nl-button:focus-visible,
 .nl-chip:focus-visible,
 .nl-input:focus-visible,
+.nl-segmented__input:focus-visible + .nl-segmented__text,
 .nl-tab:focus-visible,
 .nl-gallery__more:focus-visible {
   outline: 2px solid var(--signal);
@@ -83,6 +84,59 @@
 }
 .nl-button--block {
   width: 100%;
+}
+
+/* Segmented control (radio as button group) */
+.nl-segmented {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--surface-inset);
+}
+.nl-segmented__item {
+  flex: 1 1 0;
+  position: relative;
+  margin: 0;
+  min-width: 0;
+  cursor: pointer;
+}
+.nl-segmented__item + .nl-segmented__item {
+  box-shadow: inset 1px 0 0 var(--line);
+}
+.nl-segmented__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.nl-segmented__text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-sm);
+  padding: 0 var(--space-3);
+  font-family: var(--font-text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--ink-muted);
+  background: transparent;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+  pointer-events: none;
+}
+.nl-segmented__item:hover .nl-segmented__text {
+  color: var(--ink-2);
+}
+.nl-segmented__item:has(.nl-segmented__input:checked) .nl-segmented__text {
+  background: var(--signal-tint);
+  color: var(--ink);
+  font-weight: 700;
 }
 .nl-button:disabled {
   cursor: not-allowed;
@@ -341,6 +395,10 @@
   font-size: 14px;
   color: var(--ink-2);
 }
+.nl-progress__row--link {
+  color: inherit;
+  text-decoration: none;
+}
 .nl-progress__left {
   font-weight: 600;
   color: var(--signal);
@@ -354,6 +412,44 @@
 .nl-progress__fill {
   height: 100%;
   background: var(--signal);
+}
+
+/* Public training roster */
+.nl-roster {
+  margin-top: var(--space-6);
+  font-family: var(--font-text);
+}
+.nl-roster__title {
+  font-size: 22px;
+  margin: 0 0 var(--space-4);
+}
+.nl-roster__empty {
+  margin: 0;
+  color: var(--ink-muted);
+}
+.nl-roster__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: roster;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.nl-roster__item {
+  counter-increment: roster;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: 15px;
+  color: var(--ink);
+}
+.nl-roster__item::before {
+  content: counter(roster) ".";
+  flex: none;
+  min-width: 1.5em;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Field */

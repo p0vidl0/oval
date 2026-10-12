@@ -1,6 +1,8 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { publicRosterLabel } from "@/lib/auth/user-display";
 import { db } from "@/lib/db/client";
 import { feedPosts, registrations, trainingSessions } from "@/lib/db/schema";
+import { user } from "@/lib/db/schema/auth-schema";
 import { livePostCondition } from "@/lib/feed/publication";
 import {
   isRegistrationOpen,
@@ -21,6 +23,32 @@ function publishedAnnouncementJoin() {
     eq(feedPosts.type, "training_announcement"),
     livePostCondition(),
   );
+}
+
+export async function listPublicRoster(sessionId: string) {
+  const rows = await db
+    .select({
+      registrationId: registrations.id,
+      name: user.name,
+      rosterNameVisible: user.rosterNameVisible,
+    })
+    .from(registrations)
+    .innerJoin(user, eq(registrations.userId, user.id))
+    .where(
+      and(
+        eq(registrations.trainingSessionId, sessionId),
+        inArray(registrations.status, [...ACTIVE_STATUSES]),
+      ),
+    )
+    .orderBy(asc(registrations.createdAt));
+
+  return rows.map((row) => ({
+    id: row.registrationId,
+    label: publicRosterLabel({
+      name: row.name,
+      rosterNameVisible: row.rosterNameVisible,
+    }),
+  }));
 }
 
 export async function countActiveRegistrations(sessionId: string) {

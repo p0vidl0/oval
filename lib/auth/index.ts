@@ -27,6 +27,16 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
+  user: {
+    additionalFields: {
+      rosterNameVisible: {
+        type: "boolean",
+        required: true,
+        defaultValue: true,
+        input: false,
+      },
+    },
+  },
   account: {
     accountLinking: {
       enabled: true,

@@ -101,7 +101,12 @@ export function AnnouncementFeedCard(props: FeedCardProps) {
                 indexOffset={media.galleryIndexOffset}
               />
             ) : null}
-            {training ? <FeedCardTrainingProgress training={training} /> : null}
+            {training ? (
+              <FeedCardTrainingProgress
+                training={training}
+                href={linkTitle && !previewMode ? `/feed/${postId}` : undefined}
+              />
+            ) : null}
           </div>
           {media.sideImage ? (
             <FeedCardSidePhoto image={media.sideImage} index={0} />

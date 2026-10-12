@@ -1,9 +1,14 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import {
+  PUBLIC_ROSTER_ANONYMOUS_LABEL,
+  publicRosterLabel,
+} from "@/lib/auth/user-display";
 import { db } from "@/lib/db/client";
-import { payments, registrations } from "@/lib/db/schema";
+import { payments, registrations, user } from "@/lib/db/schema";
 import {
   cancelUserRegistration,
+  listPublicRoster,
   registerUserForSession,
 } from "@/lib/training/registrations";
 import {
@@ -119,5 +124,40 @@ run("registrations", () => {
     const regId = await seedRegistration(userId, sessionId, "paid");
     const result = await cancelUserRegistration(regId, userId, false);
     expect(result.ok).toBe(true);
+  });
+
+  it("public roster lists active registrations with anonymized labels", async () => {
+    const { sessionId } = await seedPublishedAnnouncement({ priceCents: 0 });
+    const visibleId = await seedUser("roster-visible");
+    const hiddenId = await seedUser("roster-hidden");
+    const emptyNameId = await seedUser("roster-empty");
+    await db
+      .update(user)
+      .set({ name: "Иван Иванов", rosterNameVisible: true })
+      .where(eq(user.id, visibleId));
+    await db
+      .update(user)
+      .set({ name: "Secret Person", rosterNameVisible: false })
+      .where(eq(user.id, hiddenId));
+    await db
+      .update(user)
+      .set({ name: "   ", rosterNameVisible: true })
+      .where(eq(user.id, emptyNameId));
+
+    await seedRegistration(visibleId, sessionId, "paid");
+    await seedRegistration(hiddenId, sessionId, "paid");
+    await seedRegistration(emptyNameId, sessionId, "paid");
+    const cancelledUser = await seedUser("roster-cancelled");
+    await seedRegistration(cancelledUser, sessionId, "cancelled");
+
+    const roster = await listPublicRoster(sessionId);
+    expect(roster).toHaveLength(3);
+    expect(roster.some((row) => row.label === "Иван Иванов")).toBe(true);
+    expect(
+      roster.filter((row) => row.label === PUBLIC_ROSTER_ANONYMOUS_LABEL),
+    ).toHaveLength(2);
+    expect(
+      publicRosterLabel({ name: "Secret Person", rosterNameVisible: false }),
+    ).toBe(PUBLIC_ROSTER_ANONYMOUS_LABEL);
   });
 });

@@ -193,7 +193,8 @@ export function buildFeedLiveCard(params: {
         : undefined
       : params.userNote,
     userRegistration,
-    linkTitle: post.type !== "training_announcement",
+    // В ленте заголовок и строка «Занято» ведут на страницу поста; на /feed/[id] передают linkTitle={false}.
+    linkTitle: true,
     actions: {
       canRegister,
       trainingHref:

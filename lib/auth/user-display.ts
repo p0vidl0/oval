@@ -1,3 +1,18 @@
+export const PUBLIC_ROSTER_ANONYMOUS_LABEL = "Темная Лошадка";
+
+/** Подпись участника в публичном списке записавшихся на тренировку. */
+export function publicRosterLabel(user: {
+  name?: string | null;
+  rosterNameVisible?: boolean | null;
+}): string {
+  if (user.rosterNameVisible === false) {
+    return PUBLIC_ROSTER_ANONYMOUS_LABEL;
+  }
+  const name = user.name?.trim() ?? "";
+  if (!name) return PUBLIC_ROSTER_ANONYMOUS_LABEL;
+  return name;
+}
+
 /**
  * Аватар и подпись пользователя в шапке.
  * Без имени — первая буква email и сам email.

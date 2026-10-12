@@ -868,11 +868,26 @@ html {
 
 .nl-cabinet-profile-card__email {
   margin: var(--space-4) 0 0;
+  gap: var(--space-1);
 }
 
 .nl-cabinet-profile-card__email-value {
   display: flex;
   align-items: center;
+}
+
+.nl-cabinet-roster-visibility {
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.nl-cabinet-roster-visibility__hint {
+  margin: 0 0 var(--space-5);
+  color: var(--ink-muted);
 }
 
 .nl-cabinet-notify-card {
