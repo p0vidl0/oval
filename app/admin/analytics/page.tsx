@@ -93,7 +93,7 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
         <table className="nl-admin-analytics__table">
           <thead>
             <tr>
-              <th scope="col">Путь</th>
+              <th scope="col">Страница</th>
               <th scope="col">Просмотры</th>
             </tr>
           </thead>
@@ -105,7 +105,12 @@ export default async function AdminAnalyticsPage({ searchParams }: Props) {
             ) : (
               topPaths.map((row) => (
                 <tr key={row.path}>
-                  <td>{row.path}</td>
+                  <td>
+                    <Link href={row.path}>{row.label}</Link>
+                    <div className="nl-admin-analytics__path nl-mono">
+                      {row.path}
+                    </div>
+                  </td>
                   <td className="nl-mono">{row.views}</td>
                 </tr>
               ))

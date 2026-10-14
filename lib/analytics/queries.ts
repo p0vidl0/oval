@@ -1,4 +1,5 @@
 import { and, count, countDistinct, desc, eq, gte, sql } from "drizzle-orm";
+import { resolveAnalyticsPathLabels } from "@/lib/analytics/path-labels";
 import { db } from "@/lib/db/client";
 import { analyticsEvents } from "@/lib/db/schema";
 
@@ -65,7 +66,7 @@ export async function getAnalyticsOverview(
   };
 }
 
-export type TopPathRow = { path: string; views: number };
+export type TopPathRow = { path: string; views: number; label: string };
 
 export async function getTopPaths(
   days: AnalyticsPeriodDays,
@@ -82,9 +83,16 @@ export async function getTopPaths(
     .orderBy(desc(count()))
     .limit(limit);
 
-  return rows
-    .filter((r): r is TopPathRow => Boolean(r.path))
-    .map((r) => ({ path: r.path, views: r.views }));
+  const filtered = rows.filter((r): r is { path: string; views: number } =>
+    Boolean(r.path),
+  );
+  const labels = await resolveAnalyticsPathLabels(filtered.map((r) => r.path));
+
+  return filtered.map((r) => ({
+    path: r.path,
+    views: r.views,
+    label: labels.get(r.path) ?? r.path,
+  }));
 }
 
 export type UtmRow = {
