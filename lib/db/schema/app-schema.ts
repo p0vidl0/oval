@@ -26,6 +26,16 @@ export const feedPostStatusEnum = pgEnum("feed_post_status", [
   "unpublished",
 ]);
 
+export const socialPublishChannelEnum = pgEnum("social_publish_channel", [
+  "telegram",
+]);
+
+export const socialPublishStatusEnum = pgEnum("social_publish_status", [
+  "pending",
+  "sent",
+  "failed",
+]);
+
 export const feedPosts = pgTable(
   "feed_posts",
   {
@@ -65,6 +75,35 @@ export const feedPosts = pgTable(
     uniqueIndex("feed_posts_session_announcement_uidx")
       .on(table.relatedSessionId)
       .where(sql`${table.type} = 'training_announcement'`),
+  ],
+);
+
+export const feedPostSocialPublishes = pgTable(
+  "feed_post_social_publishes",
+  {
+    id: text("id").primaryKey(),
+    feedPostId: text("feed_post_id")
+      .notNull()
+      .references(() => feedPosts.id, { onDelete: "restrict" }),
+    channel: socialPublishChannelEnum("channel").notNull(),
+    status: socialPublishStatusEnum("status").notNull().default("pending"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    externalId: text("external_id"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("feed_post_social_publishes_post_channel_uidx").on(
+      table.feedPostId,
+      table.channel,
+    ),
+    index("feed_post_social_publishes_status_idx").on(table.status),
   ],
 );
 

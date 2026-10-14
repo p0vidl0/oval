@@ -17,7 +17,6 @@ import {
   appendImagesFromForm,
   syncImagesFromForm,
 } from "@/lib/admin/save-post-images";
-import { tryPublishFeedPostToTelegramChannel } from "@/lib/bots/telegram/publish-feed-post";
 import { db } from "@/lib/db/client";
 import { feedPosts } from "@/lib/db/schema";
 import { maxImagesForPostType } from "@/lib/feed/post-image-limits";
@@ -27,6 +26,8 @@ import {
   getFeedPostById,
   getTrainingSessionById,
 } from "@/lib/feed/queries";
+import { scheduleSocialPublishAfter } from "@/lib/feed/social-publish";
+import { ensureSocialPublishJobs } from "@/lib/feed/social-publish-jobs";
 import { publishFeedEvent } from "@/lib/realtime/feed-event-bus";
 
 function revalidatePost(postId: string, sessionId: string | null) {
@@ -97,10 +98,11 @@ export async function createPublication(formData: FormData) {
     await savePinnedForState(tx, id, pinned, state);
   });
   await appendImagesFromForm(id, formData, title, maxImagesForPostType(type));
+  await ensureSocialPublishJobs(id);
 
   revalidatePost(id, sessionId);
   emitFeedPostLive(id, isPostLive(state), false);
-  await tryPublishFeedPostToTelegramChannel(id);
+  scheduleSocialPublishAfter(id, state);
   if (sessionId) {
     publishFeedEvent({ type: "session.changed", sessionId });
     redirect(`/admin/sessions/${sessionId}?tab=history`);
@@ -133,12 +135,11 @@ export async function updatePublication(formData: FormData) {
     redirect(withError(postUrl, error.message));
   }
   const pinned = next.status === "published" && formData.get("pinned") === "on";
-  const publishToTelegram = readPublishToTelegram(formData);
 
   await db.transaction(async (tx) => {
     await tx
       .update(feedPosts)
-      .set({ title, body, pinned, publishToTelegram, ...next })
+      .set({ title, body, pinned, ...next })
       .where(eq(feedPosts.id, postId));
     await savePinnedForState(tx, postId, pinned, next);
   });
@@ -154,7 +155,7 @@ export async function updatePublication(formData: FormData) {
   const wasLive = isPostLive(post, now);
   const isLive = isPostLive(next, now);
   emitFeedPostLive(postId, isLive, wasLive);
-  await tryPublishFeedPostToTelegramChannel(postId);
+  scheduleSocialPublishAfter(postId, next);
 
   const rescheduled =
     isPostScheduled(next, now) &&

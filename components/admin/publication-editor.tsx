@@ -45,7 +45,6 @@ type PostSlice = {
   /** Время выхода, если публикация отложена (вычисляется на сервере). */
   scheduledAt: Date | null;
   pinned: boolean;
-  publishToTelegram: boolean;
 };
 
 /** Тренировка для превью анонса (поля тренировки в форме не редактируются). */
@@ -452,12 +451,12 @@ export function PublicationEditor({
               Закрепить вверху ленты
             </label>
 
-            {telegramChannelPublish ? (
+            {telegramChannelPublish && !post ? (
               <label className="nl-check">
                 <input
                   name="publish_to_telegram"
                   type="checkbox"
-                  defaultChecked={post?.publishToTelegram ?? false}
+                  defaultChecked
                 />
                 Запостить в Telegram-канал
               </label>

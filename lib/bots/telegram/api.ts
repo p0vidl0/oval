@@ -12,11 +12,39 @@ export type SendTelegramMessageOptions = {
   inline_keyboard?: InlineKeyboardButton[][];
 };
 
+type TelegramMessageRef = { message_id: number };
+
 type TelegramApiResult = {
   ok: boolean;
   description?: string;
-  result?: { message_id: number; message_ids?: number[] };
+  result?:
+    | TelegramMessageRef
+    | TelegramMessageRef[]
+    | { message_ids?: number[] };
 };
+
+/** sendMediaGroup возвращает массив Message, не message_ids. */
+export function telegramMessageIdsFromResult(result: unknown): number[] {
+  if (Array.isArray(result)) {
+    return result
+      .map((item) =>
+        item && typeof item === "object" && "message_id" in item
+          ? Number((item as TelegramMessageRef).message_id)
+          : NaN,
+      )
+      .filter((id) => Number.isFinite(id));
+  }
+  if (result && typeof result === "object") {
+    const obj = result as TelegramMessageRef & { message_ids?: number[] };
+    if (Array.isArray(obj.message_ids) && obj.message_ids.length > 0) {
+      return obj.message_ids;
+    }
+    if (typeof obj.message_id === "number") {
+      return [obj.message_id];
+    }
+  }
+  return [];
+}
 
 async function parseTelegramResponse(
   method: string,
@@ -83,8 +111,8 @@ async function callTelegramBotApiMultipart(
 }
 
 function firstMessageId(payload: TelegramApiResult): number {
-  const id =
-    payload.result?.message_id ?? payload.result?.message_ids?.[0] ?? null;
+  const ids = telegramMessageIdsFromResult(payload.result);
+  const id = ids[0];
   if (id == null) {
     throw new Error("Telegram API returned no message_id");
   }
@@ -175,9 +203,11 @@ export async function sendTelegramMediaGroupUpload(
     })),
   );
 
-  const ids = payload.result?.message_ids;
-  if (!ids?.length) {
-    throw new Error("Telegram sendMediaGroup returned no message_ids");
+  const messageIds = telegramMessageIdsFromResult(payload.result);
+  if (!messageIds.length) {
+    throw new Error(
+      `Telegram sendMediaGroup returned no message ids: ${JSON.stringify(payload.result)}`,
+    );
   }
-  return { messageIds: ids };
+  return { messageIds };
 }

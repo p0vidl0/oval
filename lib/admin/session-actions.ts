@@ -16,9 +16,10 @@ import {
   readRequiredScheduleFromForm,
   readTrainingSettingsFromForm,
 } from "@/lib/admin/training-form";
-import { tryPublishFeedPostToTelegramChannel } from "@/lib/bots/telegram/publish-feed-post";
 import { maxImagesForPostType } from "@/lib/feed/post-image-limits";
 import { isPostLive } from "@/lib/feed/publication";
+import { scheduleSocialPublishAfter } from "@/lib/feed/social-publish";
+import { ensureSocialPublishJobs } from "@/lib/feed/social-publish-jobs";
 import { publishFeedEvent } from "@/lib/realtime/feed-event-bus";
 import { publishSessionRegistrationsChanged } from "@/lib/realtime/publish-session-registrations-changed";
 import {
@@ -96,12 +97,15 @@ export async function createTrainingAction(formData: FormData) {
           String(formData.get("title") ?? ""),
           maxImagesForPostType("training_announcement"),
         );
+        await ensureSocialPublishJobs(result.announcementPostId);
         emitFeedPostLive(
           result.announcementPostId,
           publication ? isPostLive(publication) : false,
           false,
         );
-        await tryPublishFeedPostToTelegramChannel(result.announcementPostId);
+        if (publication) {
+          scheduleSocialPublishAfter(result.announcementPostId, publication);
+        }
       }
       revalidateTraining(result.sessionId);
       return sessionUrl(result.sessionId, { done: "created" });

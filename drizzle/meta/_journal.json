@@ -85,6 +85,13 @@
       "when": 1791800000000,
       "tag": "0011_user_roster_name_visible",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792000000000,
+      "tag": "0012_feed_post_social_publishes",
+      "breakpoints": true
     }
   ]
 }

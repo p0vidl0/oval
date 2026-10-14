@@ -5,9 +5,9 @@
  */
 import { and, eq, gt, lte } from "drizzle-orm";
 import { applyPinned } from "@/lib/admin/post-pinning";
-import { tryPublishFeedPostToTelegramChannel } from "@/lib/bots/telegram/publish-feed-post";
 import { db } from "@/lib/db/client";
 import { feedPosts } from "@/lib/db/schema";
+import { sweepPendingSocialPublishes } from "@/lib/feed/social-publish-sweep";
 import { publishFeedEvent } from "@/lib/realtime/feed-event-bus";
 
 const INTERVAL_MS = 30_000;
@@ -32,7 +32,6 @@ export async function releaseDuePosts(from: Date, to: Date) {
 
   for (const post of due) {
     if (post.pinned) await applyPinned(db, post.id, true);
-    await tryPublishFeedPostToTelegramChannel(post.id);
     publishFeedEvent({ type: "feed.post_published", postId: post.id });
     if (post.relatedSessionId) {
       publishFeedEvent({
@@ -46,18 +45,26 @@ export async function releaseDuePosts(from: Date, to: Date) {
 
 /** Запускается один раз на процесс (из `instrumentation.ts`). */
 export function startScheduledPublisher() {
-  const g = globalThis as typeof globalThis & { [GLOBAL_KEY]?: boolean };
+  const g = globalThis as typeof globalThis & {
+    [GLOBAL_KEY]?: boolean;
+    __ovalScheduledPublisherTickRunning?: boolean;
+  };
   if (g[GLOBAL_KEY]) return;
   g[GLOBAL_KEY] = true;
 
   let lastCheck = new Date();
   const timer = setInterval(async () => {
+    if (g.__ovalScheduledPublisherTickRunning) return;
+    g.__ovalScheduledPublisherTickRunning = true;
     const now = new Date();
     try {
       await releaseDuePosts(lastCheck, now);
+      await sweepPendingSocialPublishes(now);
       lastCheck = now;
     } catch (error) {
       console.error("[scheduled-publisher]", error);
+    } finally {
+      g.__ovalScheduledPublisherTickRunning = false;
     }
   }, INTERVAL_MS);
   timer.unref?.();

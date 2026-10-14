@@ -117,7 +117,6 @@ export default async function AdminPostDetailPage({
           status: post.status,
           scheduledAt: isPostScheduled(post, now) ? post.publishedAt : null,
           pinned: post.pinned,
-          publishToTelegram: post.publishToTelegram,
         }}
         training={post.type === "training_announcement" ? training : null}
         telegramChannelPublish={isTelegramChannelPublishConfigured()}
