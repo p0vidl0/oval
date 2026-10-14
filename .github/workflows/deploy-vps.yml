@@ -102,6 +102,7 @@ jobs:
           TELEGRAM_BOT_USERNAME: ${{ secrets.TELEGRAM_BOT_USERNAME }}
           TELEGRAM_WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
           TELEGRAM_API_ROOT: ${{ secrets.TELEGRAM_API_ROOT }}
+          TELEGRAM_OIDC_ROOT: ${{ secrets.TELEGRAM_OIDC_ROOT }}
           VK_CLIENT_ID: ${{ secrets.VK_CLIENT_ID }}
           VK_CLIENT_SECRET: ${{ secrets.VK_CLIENT_SECRET }}
         run: |
@@ -120,6 +121,7 @@ jobs:
             [ -n "${TELEGRAM_BOT_USERNAME:-}" ] && echo "TELEGRAM_BOT_USERNAME=${TELEGRAM_BOT_USERNAME}"
             [ -n "${TELEGRAM_WEBHOOK_SECRET:-}" ] && echo "TELEGRAM_WEBHOOK_SECRET=${TELEGRAM_WEBHOOK_SECRET}"
             [ -n "${TELEGRAM_API_ROOT:-}" ] && echo "TELEGRAM_API_ROOT=${TELEGRAM_API_ROOT}"
+            [ -n "${TELEGRAM_OIDC_ROOT:-}" ] && echo "TELEGRAM_OIDC_ROOT=${TELEGRAM_OIDC_ROOT}"
             [ -n "${VK_CLIENT_ID:-}" ] && echo "VK_CLIENT_ID=${VK_CLIENT_ID}"
             [ -n "${VK_CLIENT_SECRET:-}" ] && echo "VK_CLIENT_SECRET=${VK_CLIENT_SECRET}"
           } > secrets.env

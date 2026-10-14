@@ -4,6 +4,7 @@ import {
   getTelegramOidcClientId,
   getTelegramOidcClientSecret,
   getTelegramOidcRedirectUri,
+  getTelegramOidcTokenUrl,
   isTelegramOidcConfigured,
 } from "@/lib/auth/telegram/oidc-config";
 import { verifyTelegramIdToken } from "@/lib/auth/telegram/verify-id-token";
@@ -126,7 +127,7 @@ export async function exchangeTelegramOidcCode(
     code_verifier: pending.codeVerifier,
   });
 
-  const tokenRes = await fetch("https://oauth.telegram.org/token", {
+  const tokenRes = await fetch(getTelegramOidcTokenUrl(), {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",

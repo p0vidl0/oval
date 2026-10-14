@@ -1,5 +1,19 @@
-const DISCOVERY_URL =
-  "https://oauth.telegram.org/.well-known/openid-configuration";
+const DEFAULT_TELEGRAM_OIDC_ROOT = "https://oauth.telegram.org";
+
+/** Базовый URL OIDC (reverse proxy). Без слэша в конце. Браузерный /auth не меняется. */
+export function getTelegramOidcRoot(): string {
+  const raw = process.env.TELEGRAM_OIDC_ROOT?.trim();
+  if (!raw) return DEFAULT_TELEGRAM_OIDC_ROOT;
+  return raw.replace(/\/$/, "");
+}
+
+export function getTelegramOidcTokenUrl(): string {
+  return `${getTelegramOidcRoot()}/token`;
+}
+
+export function getTelegramOidcJwksUrl(): string {
+  return `${getTelegramOidcRoot()}/.well-known/jwks.json`;
+}
 
 export function getTelegramOidcClientId(): string | undefined {
   const id =
@@ -23,5 +37,3 @@ export function getTelegramOidcRedirectUri(baseUrl: string): string {
   const authBase = base.endsWith("/api/auth") ? base : `${base}/api/auth`;
   return `${authBase}/sign-in/telegram/oidc/callback`;
 }
-
-export { DISCOVERY_URL };

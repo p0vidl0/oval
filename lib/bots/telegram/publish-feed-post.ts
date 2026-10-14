@@ -23,6 +23,7 @@ import {
   recordSocialPublishFailure,
 } from "@/lib/feed/social-publish-jobs";
 import type { FeedPostType } from "@/lib/feed/types";
+import { log } from "@/lib/log";
 import {
   buildMiniAppStartParamPost,
   buildTelegramMiniAppLink,
@@ -135,6 +136,8 @@ export async function publishFeedPostToTelegramChannel(
       const caption = await buildTelegramCaption(post);
       const photos = await resolvePhotoUploads(postId);
 
+      log("info", "telegram_publish_start", { postId: post.id });
+
       const messageId = await sendChannelPost(
         channelId,
         post.id,
@@ -144,6 +147,11 @@ export async function publishFeedPostToTelegramChannel(
       );
 
       await markSocialPublishSent(job.id, messageId);
+      log("info", "telegram_publish_done", {
+        postId: post.id,
+        ok: true,
+        messageId,
+      });
     },
   );
 }
@@ -159,6 +167,10 @@ export async function tryPublishFeedPostToTelegramChannel(
     if (job?.status === "pending") {
       await recordSocialPublishFailure(job.id, error);
     }
-    console.error("[telegram-channel-publish]", postId, error);
+    log("error", "telegram_publish_done", {
+      postId,
+      ok: false,
+      error,
+    });
   }
 }

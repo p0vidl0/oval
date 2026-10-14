@@ -61,6 +61,10 @@ pnpm run task -- e2e-down
 
 Прокси должен проксировать официальный Bot API (тот же path `/bot…`). Webhook **входящий** по-прежнему на ваш `https://<domain>/api/webhooks/telegram`.
 
+## Telegram OIDC proxy (optional)
+
+Если с сервера недоступен `oauth.telegram.org`, задайте **`TELEGRAM_OIDC_ROOT`** — базовый URL reverse proxy (без слэша в конце). Серверные запросы идут на `{TELEGRAM_OIDC_ROOT}/token` и `{TELEGRAM_OIDC_ROOT}/.well-known/jwks.json`. Редirect браузера на `https://oauth.telegram.org/auth` не меняется. На одном Caddy-хосте можно совместить с Bot API, разведя пути (`/token`, `/.well-known/*` → oauth, остальное → api).
+
 ## Telegram login (optional)
 
 Env (see [`.docker/env/oval-dev.local.env.example`](../../.docker/env/oval-dev.local.env.example)):

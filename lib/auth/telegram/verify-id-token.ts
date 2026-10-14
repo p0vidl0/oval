@@ -1,13 +1,25 @@
 import { createRemoteJWKSet, type JWTPayload, jwtVerify } from "jose";
 import {
   getTelegramOidcClientId,
+  getTelegramOidcJwksUrl,
   isTelegramOidcConfigured,
 } from "@/lib/auth/telegram/oidc-config";
 import type { TelegramProfile } from "@/lib/auth/telegram/types";
 
-const JWKS = createRemoteJWKSet(
-  new URL("https://oauth.telegram.org/.well-known/jwks.json"),
-);
+const ISSUER = "https://oauth.telegram.org";
+
+let jwksCache: {
+  url: string;
+  keys: ReturnType<typeof createRemoteJWKSet>;
+} | null = null;
+
+function getJwks() {
+  const url = getTelegramOidcJwksUrl();
+  if (!jwksCache || jwksCache.url !== url) {
+    jwksCache = { url, keys: createRemoteJWKSet(new URL(url)) };
+  }
+  return jwksCache.keys;
+}
 
 export type TelegramIdTokenClaims = JWTPayload & {
   id?: number;
@@ -46,8 +58,8 @@ export async function verifyTelegramIdToken(
   if (!clientId) return null;
 
   try {
-    const { payload } = await jwtVerify(idToken, JWKS, {
-      issuer: "https://oauth.telegram.org",
+    const { payload } = await jwtVerify(idToken, getJwks(), {
+      issuer: ISSUER,
       audience: clientId,
     });
     return telegramProfileFromClaims(payload as TelegramIdTokenClaims);
