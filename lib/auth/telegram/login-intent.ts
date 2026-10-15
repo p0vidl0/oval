@@ -32,7 +32,10 @@ function parseIntentValue(raw: string): TelegramLoginIntentRecord | null {
   }
 }
 
-export async function createTelegramLoginIntent(next?: string): Promise<{
+export async function createTelegramLoginIntent(
+  next?: string,
+  linkToken?: string,
+): Promise<{
   token: string;
   deepLink: string;
   expiresIn: number;
@@ -43,6 +46,7 @@ export async function createTelegramLoginIntent(next?: string): Promise<{
   const value: TelegramLoginIntentRecord = {
     status: "pending",
     next: next?.startsWith("/") ? next : undefined,
+    linkToken: linkToken?.trim() || undefined,
   };
   const expiresAt = new Date(Date.now() + ttlSec * 1000);
   const id = crypto.randomUUID();

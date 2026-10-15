@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { normalizeEmail } from "@/lib/auth/email";
 import { getLatestEmailOtp } from "@/lib/email/recording-store";
+import { readPersistedTestEmailOtp } from "@/lib/email/test-otp-persist";
 import { isTestApiEnabled } from "@/lib/test-api";
 
 export async function GET(request: Request) {
@@ -19,12 +20,20 @@ export async function GET(request: Request) {
 
   const email = normalizeEmail(emailRaw) ?? emailRaw.trim().toLowerCase();
   const record = getLatestEmailOtp(email);
-  if (!record) {
+  if (record) {
+    return NextResponse.json({
+      email: record.email,
+      code: record.code,
+    });
+  }
+
+  const persisted = await readPersistedTestEmailOtp(email);
+  if (!persisted) {
     return NextResponse.json({ error: "no otp" }, { status: 404 });
   }
 
   return NextResponse.json({
-    email: record.email,
-    code: record.code,
+    email,
+    code: persisted,
   });
 }

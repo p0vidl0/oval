@@ -18,11 +18,14 @@ export const auth = betterAuth({
   baseURL: resolveBetterAuthBaseURL(),
   secret: process.env.BETTER_AUTH_SECRET,
   ...(Object.keys(advanced).length > 0 ? { advanced } : {}),
-  rateLimit: {
-    customRules: {
-      "/email-otp/send-verification-otp": { window: 600, max: 5 },
-    },
-  },
+  rateLimit:
+    process.env.OVAL_TEST_API === "1"
+      ? { enabled: false }
+      : {
+          customRules: {
+            "/email-otp/send-verification-otp": { window: 600, max: 5 },
+          },
+        },
   database: drizzleAdapter(db, {
     provider: "pg",
     schema,
@@ -33,6 +36,16 @@ export const auth = betterAuth({
         type: "boolean",
         required: true,
         defaultValue: true,
+        input: false,
+      },
+      deletedAt: {
+        type: "date",
+        required: false,
+        input: false,
+      },
+      mergedIntoUserId: {
+        type: "string",
+        required: false,
         input: false,
       },
     },
@@ -48,7 +61,10 @@ export const auth = betterAuth({
       expiresIn: 600,
       allowedAttempts: 3,
       resendStrategy: "reuse",
-      rateLimit: { window: 600, max: 5 },
+      rateLimit:
+        process.env.OVAL_TEST_API === "1"
+          ? { window: 60, max: 500 }
+          : { window: 600, max: 5 },
       sendVerificationOTP: async ({ email, otp }) => {
         await sendAuthEmailOtp(email, otp);
       },

@@ -152,7 +152,10 @@ export default async function AdminSessionPage({
           </h1>
           <p
             className="nl-mono data-sm"
-            style={{ color: "var(--ink-2)", margin: "var(--space-2) 0 0" }}
+            style={{
+              color: "var(--on-page-fg, var(--ink-2))",
+              margin: "var(--space-2) 0 0",
+            }}
           >
             {formatShortListDate(session.startsAt)} ·{" "}
             {formatTimeRange(session.startsAt, session.endsAt)}

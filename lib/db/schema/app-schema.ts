@@ -354,6 +354,46 @@ export const analyticsEvents = pgTable(
   ],
 );
 
+export const userMergeKindEnum = pgEnum("user_merge_kind", [
+  "self_link",
+  "super_admin",
+]);
+
+export type UserMergeSnapshot = {
+  sourceEmail?: string | null;
+  movedAccountIds?: string[];
+  movedRegistrationIds?: string[];
+  movedPaymentIds?: string[];
+  cancelledRegistrationIds?: string[];
+};
+
+/** Журнал склейки пользователей (источник помечен deleted_at). */
+export const userMerges = pgTable(
+  "user_merges",
+  {
+    id: text("id").primaryKey(),
+    sourceUserId: text("source_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    targetUserId: text("target_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
+    performedByUserId: text("performed_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    kind: userMergeKindEnum("kind").notNull(),
+    snapshot: jsonb("snapshot").$type<UserMergeSnapshot>().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("user_merges_source_user_idx").on(table.sourceUserId),
+    index("user_merges_target_user_idx").on(table.targetUserId),
+    index("user_merges_created_at_idx").on(table.createdAt),
+  ],
+);
+
 /** Audit of OTP emails sent via SMTP (rate-limit / quota protection). */
 export const emailOtpSendLog = pgTable(
   "email_otp_send_log",

@@ -46,7 +46,10 @@ export function TelegramLogin({ oidcConfigured }: Props) {
   if (isMiniApp) {
     return (
       <div className="nl-login-telegram" data-testid="telegram-login">
-        <p className="caption" style={{ color: "var(--ink-2)" }}>
+        <p
+          className="caption"
+          style={{ color: "var(--on-page-fg, var(--ink-2))" }}
+        >
           {authPending
             ? "Вход через Telegram…"
             : "Вы в приложении Telegram — вход выполняется автоматически."}

@@ -170,7 +170,10 @@ export default async function FeedPostPage({ params, searchParams }: Props) {
         training.priceCents > 0 &&
         training.onlinePaymentEnabled ? (
           <>
-            <p className="caption" style={{ color: "var(--ink-2)" }}>
+            <p
+              className="caption"
+              style={{ color: "var(--on-page-fg, var(--ink-2))" }}
+            >
               {formatPriceRub(training.priceCents, training.currency)} за
               тренировку · оплатить можно позже
             </p>

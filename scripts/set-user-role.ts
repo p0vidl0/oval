@@ -9,7 +9,7 @@ import { normalizeEmail } from "@/lib/auth/email";
 import { db } from "@/lib/db/client";
 import { user } from "@/lib/db/schema";
 
-const ROLES = ["user", "editor", "admin"] as const;
+const ROLES = ["user", "editor", "admin", "super_admin"] as const;
 
 const emailArg = process.argv[2];
 const roleArg = process.argv[3] as (typeof ROLES)[number];

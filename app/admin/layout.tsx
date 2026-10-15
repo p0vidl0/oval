@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { NlShell } from "@/components/nl/shell";
-import { canAccessAdmin } from "@/lib/auth/roles";
+import { canAccessAdmin, isSuperAdmin } from "@/lib/auth/roles";
 import { getServerSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
@@ -20,6 +20,8 @@ export default async function AdminLayout({
     redirect("/");
   }
 
+  const superAdmin = isSuperAdmin(session.user.role as string | undefined);
+
   return (
     <NlShell tab="admin">
       <div className="nl-page">
@@ -29,6 +31,7 @@ export default async function AdminLayout({
           <Link href="/admin/registrations">Участники</Link>
           <Link href="/admin/payments">Оплата</Link>
           <Link href="/admin/analytics">Статистика</Link>
+          {superAdmin ? <Link href="/admin/users/merge">Склейка</Link> : null}
         </nav>
         {children}
       </div>

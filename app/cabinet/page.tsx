@@ -2,11 +2,19 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SignOutButton } from "@/app/cabinet/sign-out-button";
+import { AuthMethodsPanel } from "@/components/cabinet/auth-methods-panel";
 import { CancelRegistrationForm } from "@/components/nl/cancel-registration-form";
 import { NlDateStack } from "@/components/nl/date-stack";
 import { NlShell } from "@/components/nl/shell";
 import { NlStatus } from "@/components/nl/status";
+import {
+  listAvailableProvidersToLink,
+  listLinkedAuthMethods,
+} from "@/lib/auth/linked-accounts";
 import { getServerSession } from "@/lib/auth/session";
+import { isTelegramBotLoginConfigured } from "@/lib/auth/telegram/config";
+import { isTelegramOidcConfigured } from "@/lib/auth/telegram/oidc-config";
+import { isVkConfigured } from "@/lib/auth/vk/config";
 import { historyStatus } from "@/lib/cabinet/history-status";
 import { updateProfileName } from "@/lib/cabinet/profile-actions";
 import { db } from "@/lib/db/client";
@@ -32,7 +40,13 @@ import {
 } from "@/lib/training/status";
 
 type Props = {
-  searchParams: Promise<{ history?: string; error?: string }>;
+  searchParams: Promise<{
+    history?: string;
+    error?: string;
+    link?: string;
+    linkToken?: string;
+    linkError?: string;
+  }>;
 };
 
 function displayShortName(full: string): string {
@@ -60,6 +74,27 @@ export default async function CabinetPage({ searchParams }: Props) {
     .where(eq(user.id, session.user.id))
     .limit(1);
   const rosterNameVisible = profileRows[0]?.rosterNameVisible ?? true;
+
+  const linkedMethods = await listLinkedAuthMethods(session.user.id);
+  let availableProviders = listAvailableProvidersToLink(linkedMethods);
+  if (!isVkConfigured()) {
+    availableProviders = availableProviders.filter((p) => p !== "vk");
+  }
+  if (!isTelegramOidcConfigured() && !isTelegramBotLoginConfigured()) {
+    availableProviders = availableProviders.filter((p) => p !== "telegram");
+  }
+
+  let linkNotice: string | null = null;
+  if (params.link === "ok") {
+    linkNotice = "Способ входа добавлен.";
+  } else if (params.link === "merged") {
+    linkNotice = "Аккаунты объединены.";
+  } else if (params.linkError) {
+    linkNotice = params.linkError;
+  }
+
+  const mergeLinkToken =
+    params.link === "merge" && params.linkToken ? params.linkToken : null;
 
   const registrations = await listUserRegistrations(session.user.id);
   const history = await listUserRegistrationHistory(session.user.id);
@@ -359,6 +394,17 @@ export default async function CabinetPage({ searchParams }: Props) {
                   </button>
                 </form>
               </div>
+            </section>
+
+            <section className="nl-cabinet-section">
+              <AuthMethodsPanel
+                linked={linkedMethods}
+                available={availableProviders}
+                mergeLinkToken={mergeLinkToken}
+                linkNotice={linkNotice}
+                telegramOidcConfigured={isTelegramOidcConfigured()}
+                telegramBotConfigured={isTelegramBotLoginConfigured()}
+              />
             </section>
 
             {payments.length > 0 ? (

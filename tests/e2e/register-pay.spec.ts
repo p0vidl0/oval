@@ -1,29 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { loginWithEmailOtp } from "./helpers/login";
 
 test("login, register, webhook pay, cabinet", async ({ page, request }) => {
   const email = `e2e-${Date.now()}@oval.test`;
 
-  await page.goto("/login?next=/feed");
-  await page.getByTestId("login-email").fill(email);
-  await page.getByTestId("login-submit").click();
-  await expect(page.getByTestId("login-code")).toBeVisible();
-
-  let code: string | undefined;
-  for (let attempt = 0; attempt < 25; attempt++) {
-    const emailRes = await request.get(
-      `/api/test/email/latest?email=${encodeURIComponent(email)}`,
-    );
-    if (emailRes.ok()) {
-      code = (await emailRes.json()).code;
-      break;
-    }
-    await page.waitForTimeout(200);
-  }
-  expect(code).toBeTruthy();
-
-  await page.getByTestId("login-code").fill(code ?? "");
-  await page.getByTestId("login-submit").click();
-  await page.waitForURL(/\/feed/, { timeout: 15_000 });
+  await loginWithEmailOtp(page, request, email, "/feed");
 
   // Новый пользователь без имени: перед первой записью спрашиваем имя.
   await page.getByRole("button", { name: "Записаться" }).first().click();

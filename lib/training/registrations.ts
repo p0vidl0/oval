@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { publicRosterLabel } from "@/lib/auth/user-display";
 import { db } from "@/lib/db/client";
 import { feedPosts, registrations, trainingSessions } from "@/lib/db/schema";
@@ -38,6 +38,7 @@ export async function listPublicRoster(sessionId: string) {
       and(
         eq(registrations.trainingSessionId, sessionId),
         inArray(registrations.status, [...ACTIVE_STATUSES]),
+        isNull(user.deletedAt),
       ),
     )
     .orderBy(asc(registrations.createdAt));

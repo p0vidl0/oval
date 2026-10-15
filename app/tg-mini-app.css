@@ -10,6 +10,55 @@ html.tg-mini-app body.nl-root {
   color: var(--tg-theme-text-color, var(--ink));
 }
 
+/* Для инлайн-цвета вторичного текста на фоне страницы. В обычном вебе переменной нет — остаётся --ink-2. */
+html.tg-mini-app {
+  --on-page-fg: var(--tg-theme-text-color, var(--ink));
+}
+
+/* Тёмные плашки не следуют за фоном Telegram: текст внутри остаётся светлым. */
+html.tg-mini-app .nl-aside-card,
+html.tg-mini-app .nl-cabinet-panel,
+html.tg-mini-app .nl-login-prompt,
+html.tg-mini-app .nl-table-wrap,
+html.tg-mini-app .nl-dialog__panel,
+html.tg-mini-app .nl-analytics-consent__inner,
+html.tg-mini-app .nl-admin-callout,
+html.tg-mini-app .nl-admin-analytics__card,
+html.tg-mini-app .nl-upcoming__item,
+html.tg-mini-app .nl-login-cover__title {
+  color: var(--ink);
+}
+
+/* Светлый --ink / --ink-2 на прозрачном фоне страницы. Внутри плашки inherit снова даёт --ink. */
+html.tg-mini-app .nl-roster__item,
+html.tg-mini-app .nl-status,
+html.tg-mini-app .nl-label,
+html.tg-mini-app .nl-page-lead,
+html.tg-mini-app .nl-cabinet-payments,
+html.tg-mini-app .nl-privacy__link,
+html.tg-mini-app .nl-admin-nav a,
+html.tg-mini-app .nl-admin-tabs__tab,
+html.tg-mini-app .nl-chip,
+html.tg-mini-app
+  .nl-button:not(.nl-button--primary):not(.nl-button--inverse):not(
+    .nl-button--danger
+  ) {
+  color: inherit;
+}
+
+html.tg-mini-app .nl-status--due {
+  color: var(--signal);
+}
+html.tg-mini-app .nl-status--cancelled {
+  color: var(--cancel);
+}
+html.tg-mini-app .nl-status--draft {
+  color: var(--ink-2);
+}
+html.tg-mini-app .nl-chip[aria-pressed="true"] {
+  color: var(--ink-inverse);
+}
+
 .nl-mini-app-auth-error {
   position: sticky;
   top: 0;

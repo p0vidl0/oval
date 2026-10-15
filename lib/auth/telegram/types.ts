@@ -11,6 +11,8 @@ export type TelegramLoginIntentRecord = {
   status: "pending" | "ready";
   telegramId?: string;
   next?: string;
+  /** Account link flow (cabinet). */
+  linkToken?: string;
   firstName?: string;
   lastName?: string;
   username?: string;

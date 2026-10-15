@@ -152,7 +152,10 @@ async function ParticipantHistory({ params }: { params: SearchParams }) {
       >
         {participant.name?.trim() || participant.email}
       </h1>
-      <p className="nl-mono data-sm" style={{ color: "var(--ink-2)" }}>
+      <p
+        className="nl-mono data-sm"
+        style={{ color: "var(--on-page-fg, var(--ink-2))" }}
+      >
         {participant.email}
       </p>
 

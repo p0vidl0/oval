@@ -862,6 +862,56 @@ html {
   margin-top: var(--space-5);
 }
 
+.nl-cabinet-auth-methods__list {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.nl-cabinet-auth-methods__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.nl-cabinet-auth-methods__info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.nl-cabinet-auth-methods__label {
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.nl-cabinet-auth-methods__detail {
+  color: var(--ink-muted);
+  word-break: break-all;
+}
+
+.nl-cabinet-auth-methods__unlink {
+  flex: none;
+  margin-left: auto;
+  align-self: start;
+  height: auto;
+  min-height: 0;
+  align-items: flex-start;
+  line-height: 1.35;
+}
+
+.nl-cabinet-auth-methods__add {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
 .nl-cabinet-profile-card .nl-field {
   margin: 0;
 }
@@ -916,6 +966,118 @@ html {
     flex: 1 1 100%;
     margin-left: 0;
   }
+}
+
+/* ── Админка: выбор пользователя (склейка) ─────────────────────────── */
+
+.nl-admin-user-merge-form {
+  gap: var(--space-5);
+}
+
+.nl-admin-user-picker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.nl-admin-user-picker__selected {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+}
+
+.nl-admin-user-picker__name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.nl-admin-user-picker__logins {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nl-admin-user-picker__email,
+.nl-admin-user-picker__id {
+  margin: 0;
+  color: var(--ink-muted);
+}
+
+.nl-admin-user-picker__panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  max-height: min(420px, 60vh);
+  overflow: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated, var(--bg));
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
+
+.nl-admin-user-picker__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nl-admin-user-picker__option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.nl-admin-user-picker__option:last-child {
+  border-bottom: none;
+}
+
+.nl-admin-user-picker__option:hover,
+.nl-admin-user-picker__option:focus-visible {
+  background: var(--bg-muted, rgb(255 255 255 / 0.06));
+}
+
+.nl-admin-user-picker__option-name {
+  font-weight: 600;
+}
+
+.nl-admin-user-picker__option-email {
+  display: block;
+  color: var(--ink-muted);
+}
+
+.nl-admin-user-picker__option-id {
+  color: var(--ink-muted);
+}
+
+.nl-admin-user-picker__empty {
+  margin: 0;
+  padding: var(--space-4);
+  color: var(--ink-muted);
+}
+
+.nl-admin-user-picker__pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--line);
 }
 
 /* ── Админка: тренировка как основная сущность ───────────────────────── */

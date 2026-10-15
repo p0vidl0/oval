@@ -28,7 +28,7 @@ Stack: **Next.js App Router**, **Better Auth** (`lib/auth/`), **Drizzle** (`lib/
 - CLI / schema: root `auth.ts` re-exports auth for `pnpm run auth:generate`.
 - **Telegram channel:** autopublish при выходе поста в ленту — `publish_to_telegram` + `TELEGRAM_CHANNEL_ID`, `lib/bots/telegram/publish-feed-post.ts`. Исходящий Bot API: `lib/bots/telegram/api.ts`, опц. **`TELEGRAM_API_ROOT`** (proxy). Очередь: `feed_post_social_publishes` (`lib/feed/social-publish-jobs.ts`); `after()` + догон `lib/feed/social-publish-sweep.ts`; замок на пост — `lib/bots/social-publish/in-flight-lock.ts`; лимит 10/час — `lib/bots/social-publish/rate-limit.ts`; ретраи — `SOCIAL_PUBLISH_MAX_RETRIES` (default 3).
 - **Telegram login:** OIDC (`TELEGRAM_OIDC_*`) — `/telegram/oidc/start`, `/sign-in/telegram/oidc`, GET `/sign-in/telegram/oidc/callback`; серверные `/token` и JWKS — опц. **`TELEGRAM_OIDC_ROOT`** (браузерный `/auth` на oauth.telegram.org); bot deep link — `/telegram/login-intent`, `/sign-in/telegram/bot`; webhook `app/api/webhooks/telegram/route.ts`. **Mini App:** `POST /sign-in/telegram/mini-app` (`initData`, `TELEGRAM_BOT_TOKEN`), клиент [`components/telegram/telegram-mini-app-provider.tsx`](../../components/telegram/telegram-mini-app-provider.tsx), deep link `start_param` — [`lib/telegram/mini-app-start-param.ts`](../../lib/telegram/mini-app-start-param.ts), опц. `TELEGRAM_MINI_APP_SHORT_NAME`. `user.email` nullable для TG-first.
-- **VK ID:** `VK_CLIENT_ID` + `VK_CLIENT_SECRET`. Кнопка на `/login` скрыта без них. Старт `POST /vk/oauth/start`, callback `GET /callback/vk` (редирект `https://<host>/api/auth/callback/vk`). Есть email — привязка к существующему пользователю; нет — `email: null`, `providerId: vk`.
+- **VK ID:** `VK_CLIENT_ID` + `VK_CLIENT_SECRET`. Кнопка на `/login` скрыта без них. Старт `POST /vk/oauth/start`, callback `GET /callback/vk` (редирект `https://<host>/api/auth/callback/vk`). Есть email — привязка к существующему пользователю; нет — `email: null`, `providerId: vk`. **Кабинет → «Способы входа»:** привязка email / Telegram / VK (`linkToken` в OAuth state); конфликт — склейка в текущего user (`lib/auth/merge-users.ts`), источник — `user.deleted_at` + удаление всех `session`. Два `pending`/`succeeded` платежа за одну тренировку блокируют склейку.
 
 ## Database
 
@@ -40,10 +40,10 @@ Stack: **Next.js App Router**, **Better Auth** (`lib/auth/`), **Drizzle** (`lib/
 - Training ↔ posts: posts reference the training via `feed_posts.related_session_id` (announcement, reschedule, cancel; max one announcement per training). Training changes are logged in `training_session_events`.
 - Local dev: `pnpm run task -- dev-up` — Postgres + **Next.js in Docker** (profile **oval-dev**, PG **5433**, app **3000**). Compose [`.docker/`](../../.docker/); [`scripts/task.ts`](../../scripts/task.ts) / [`Makefile`](../../Makefile).
 - VPS prod: [`.deploy/`](../../.deploy/) + GitHub Actions `deploy-vps.yml` (GHCR, SSH, Traefik); см. [`.deploy/README.md`](../../.deploy/README.md).
-- Integration stack: **oval-integration** (`pnpm run task -- test-integration`); e2e задел: **oval-e2e** + mailpit (`pnpm run task -- e2e-up`).
+- Integration stack: **oval-integration** (`pnpm run task -- test-integration`); e2e: **oval-e2e** + mailpit (`pnpm run task -- test-e2e`) — Playwright в `tests/e2e/` (в т.ч. `auth-merge.spec.ts`: привязка email/Telegram, self-merge, admin merge). Сиды сценариев: `POST /api/test/e2e/seed` при `OVAL_TEST_API=1`; симуляция TG bot `/start`: `POST /api/test/telegram/simulate-start`. В профиле e2e заданы `TELEGRAM_BOT_TOKEN` + `TELEGRAM_BOT_USERNAME` (bot deep link, без OIDC).
 - Payments: `lib/payments/`, webhook `app/api/webhooks/payment/[provider]/route.ts`, docs [`docs/engineering/payments.md`](../../docs/engineering/payments.md). Mock confirm — admin only.
 
 ## Roles
 
-- Default `user`; promote via `pnpm run user:role -- <email> editor|admin` after first email login.
-- Better Auth **admin** plugin: `adminRoles: ["admin"]`; `/admin` allows **editor** and **admin** (product RBAC in `lib/auth/roles.ts`).
+- Default `user`; promote via `pnpm run user:role -- <email> editor|admin|super_admin` after first email login.
+- Better Auth **admin** plugin: `adminRoles: ["admin"]`; `/admin` allows **editor**, **admin** and **super_admin** (`lib/auth/roles.ts`, продуктовый RBAC). **super_admin** — `/admin/users/merge` (ручная склейка пользователей).

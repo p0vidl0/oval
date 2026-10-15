@@ -21,6 +21,7 @@ function pkceChallenge(verifier: string): string {
 type PendingOidc = {
   codeVerifier: string;
   next?: string;
+  linkToken?: string;
 };
 
 function parsePending(raw: string): PendingOidc | null {
@@ -57,6 +58,7 @@ export function buildTelegramOidcAuthorizationUrl(
 export async function createTelegramOidcAuthorization(
   baseUrl: string,
   next?: string,
+  linkToken?: string,
 ): Promise<{ authorizationUrl: string; state: string }> {
   if (!isTelegramOidcConfigured()) {
     throw new Error("Telegram OIDC is not configured");
@@ -68,6 +70,7 @@ export async function createTelegramOidcAuthorization(
   const value: PendingOidc = {
     codeVerifier,
     next: next?.startsWith("/") ? next : undefined,
+    linkToken: linkToken?.trim() || undefined,
   };
 
   await db.insert(verification).values({
@@ -94,6 +97,7 @@ export async function exchangeTelegramOidcCode(
 ): Promise<{
   profile: Awaited<ReturnType<typeof verifyTelegramIdToken>>;
   next?: string;
+  linkToken?: string;
 }> {
   const identifier = `${STATE_PREFIX}${state}`;
   const rows = await db
@@ -150,5 +154,5 @@ export async function exchangeTelegramOidcCode(
   const profile = await verifyTelegramIdToken(tokens.id_token);
   if (!profile) throw new Error("Invalid Telegram id_token");
 
-  return { profile, next: pending.next };
+  return { profile, next: pending.next, linkToken: pending.linkToken };
 }

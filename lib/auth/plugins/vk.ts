@@ -7,6 +7,7 @@ import {
   type ExternalSignInContext,
   signInWithExternalProfile,
 } from "@/lib/auth/external-sign-in";
+import { processVkLinkIfNeeded } from "@/lib/auth/link-callback";
 import { isVkConfigured } from "@/lib/auth/vk/config";
 import { createVkAuthorization, exchangeVkCode } from "@/lib/auth/vk/oauth";
 
@@ -32,11 +33,16 @@ export const vk = () => {
               message: "VK ID is not configured",
             });
           }
-          const body = ctx.body as { next?: string } | undefined;
+          const body = ctx.body as
+            | { next?: string; linkToken?: string }
+            | undefined;
           const next = typeof body?.next === "string" ? body.next : undefined;
+          const linkToken =
+            typeof body?.linkToken === "string" ? body.linkToken : undefined;
           const started = await createVkAuthorization(
             ctx.context.baseURL,
             next,
+            linkToken,
           );
           return ctx.json(started);
         },
@@ -72,6 +78,7 @@ export const vk = () => {
 
           let profile: Awaited<ReturnType<typeof exchangeVkCode>>["profile"];
           let next: string | undefined;
+          let linkToken: string | undefined;
           try {
             const exchanged = await exchangeVkCode(
               baseUrl,
@@ -81,9 +88,19 @@ export const vk = () => {
             );
             profile = exchanged.profile;
             next = exchanged.next;
+            linkToken = exchanged.linkToken;
           } catch (error) {
             console.error("[vk oauth] callback failed", error);
             throw ctx.redirect(fail.toString());
+          }
+
+          const linkRedirect = await processVkLinkIfNeeded(
+            baseUrl,
+            linkToken,
+            profile,
+          );
+          if (linkRedirect) {
+            throw ctx.redirect(linkRedirect);
           }
 
           await signInWithExternalProfile(

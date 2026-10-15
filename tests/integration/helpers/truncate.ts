@@ -13,6 +13,7 @@ export async function truncateAppTables() {
       registrations,
       training_sessions,
       feed_posts,
+      user_merges,
       session,
       account,
       verification,

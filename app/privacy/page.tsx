@@ -35,7 +35,10 @@ export default function PrivacyPage() {
         </h1>
         <p
           className="body-sm"
-          style={{ color: "var(--ink-2)", marginTop: "var(--space-4)" }}
+          style={{
+            color: "var(--on-page-fg, var(--ink-2))",
+            marginTop: "var(--space-4)",
+          }}
         >
           Настоящий документ описывает порядок обработки персональных данных
           посетителей сайта {siteOrigin} (далее — «Сайт»), оператор — {operator}

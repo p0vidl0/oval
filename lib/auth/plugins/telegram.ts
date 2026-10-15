@@ -3,6 +3,7 @@ import {
   createAuthEndpoint,
   formCsrfMiddleware,
 } from "better-auth/api";
+import { processTelegramLinkIfNeeded } from "@/lib/auth/link-callback";
 import {
   isTelegramBotLoginConfigured,
   isTelegramMiniAppConfigured,
@@ -41,10 +42,18 @@ export const telegram = () => {
               message: "Telegram OIDC is not configured",
             });
           }
-          const body = ctx.body as { next?: string } | undefined;
+          const body = ctx.body as
+            | { next?: string; linkToken?: string }
+            | undefined;
           const next = typeof body?.next === "string" ? body.next : undefined;
+          const linkToken =
+            typeof body?.linkToken === "string" ? body.linkToken : undefined;
           const baseUrl = ctx.context.baseURL;
-          const started = await createTelegramOidcAuthorization(baseUrl, next);
+          const started = await createTelegramOidcAuthorization(
+            baseUrl,
+            next,
+            linkToken,
+          );
           return ctx.json(started);
         },
       ),
@@ -119,7 +128,7 @@ export const telegram = () => {
             });
           }
 
-          const { profile, next } = await exchangeTelegramOidcCode(
+          const { profile, next, linkToken } = await exchangeTelegramOidcCode(
             ctx.context.baseURL,
             code,
             state,
@@ -128,6 +137,15 @@ export const telegram = () => {
             throw APIError.fromStatus("UNAUTHORIZED", {
               message: "Invalid Telegram profile",
             });
+          }
+
+          const linkRedirect = await processTelegramLinkIfNeeded(
+            ctx.context.baseURL,
+            linkToken,
+            profile,
+          );
+          if (linkRedirect) {
+            throw ctx.redirect(linkRedirect);
           }
 
           await signInWithTelegramProfile(
@@ -155,9 +173,13 @@ export const telegram = () => {
               message: "Telegram bot login is not configured",
             });
           }
-          const body = ctx.body as { next?: string } | undefined;
+          const body = ctx.body as
+            | { next?: string; linkToken?: string }
+            | undefined;
           const next = typeof body?.next === "string" ? body.next : undefined;
-          const intent = await createTelegramLoginIntent(next);
+          const linkToken =
+            typeof body?.linkToken === "string" ? body.linkToken : undefined;
+          const intent = await createTelegramLoginIntent(next, linkToken);
           return ctx.json(intent);
         },
       ),
@@ -241,6 +263,17 @@ export const telegram = () => {
             throw APIError.fromStatus("UNAUTHORIZED", {
               message: "Invalid login session",
             });
+          }
+
+          if (record.linkToken) {
+            const redirect = await processTelegramLinkIfNeeded(
+              ctx.context.baseURL,
+              record.linkToken,
+              profile,
+            );
+            if (redirect) {
+              return ctx.json({ redirect });
+            }
           }
 
           return ctx.json(

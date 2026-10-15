@@ -51,7 +51,10 @@ export default async function LoginPage({ searchParams }: Props) {
         </h1>
         <p
           className="body-sm"
-          style={{ color: "var(--ink-2)", marginTop: "var(--space-2)" }}
+          style={{
+            color: "var(--on-page-fg, var(--ink-2))",
+            marginTop: "var(--space-2)",
+          }}
         >
           По email, Telegram
           {vkConfigured ? " или VK" : ""} — для участников и администраторов

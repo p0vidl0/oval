@@ -31,6 +31,7 @@ export type VkSignInProfile = {
 type PendingOauth = {
   codeVerifier: string;
   next?: string;
+  linkToken?: string;
 };
 
 function pkceChallenge(verifier: string): string {
@@ -71,6 +72,7 @@ export function buildVkAuthorizationUrl(
 export async function createVkAuthorization(
   baseUrl: string,
   next?: string,
+  linkToken?: string,
 ): Promise<{ authorizationUrl: string; state: string }> {
   if (!isVkConfigured()) {
     throw new Error("VK ID is not configured");
@@ -81,6 +83,7 @@ export async function createVkAuthorization(
   const value: PendingOauth = {
     codeVerifier,
     next: next?.startsWith("/") ? next : undefined,
+    linkToken: linkToken?.trim() || undefined,
   };
 
   await db.insert(verification).values({
@@ -135,7 +138,7 @@ export async function exchangeVkCode(
   code: string,
   state: string,
   deviceId?: string,
-): Promise<{ profile: VkSignInProfile; next?: string }> {
+): Promise<{ profile: VkSignInProfile; next?: string; linkToken?: string }> {
   const pending = await consumeState(state);
   const clientId = getVkClientId();
   const clientSecret = getVkClientSecret();
@@ -181,5 +184,9 @@ export async function exchangeVkCode(
   const info = (await infoRes.json()) as { user?: VkProfileUser };
   if (!info.user) throw new Error("VK user info missing user");
 
-  return { profile: profileFromUserInfo(info.user), next: pending.next };
+  return {
+    profile: profileFromUserInfo(info.user),
+    next: pending.next,
+    linkToken: pending.linkToken,
+  };
 }

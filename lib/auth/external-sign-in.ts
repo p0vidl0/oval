@@ -1,7 +1,8 @@
 import { APIError } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
 import { parseUserOutput } from "better-auth/db";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import { isUserDeleted } from "@/lib/auth/user-active";
 import { db } from "@/lib/db/client";
 import { user as userTable } from "@/lib/db/schema/auth-schema";
 
@@ -67,11 +68,24 @@ export async function signInWithExternalProfile(
     existing &&
     (await ctx.context.internalAdapter.findUserById(existing.userId));
 
+  if (user) {
+    const [active] = await db
+      .select({ deletedAt: userTable.deletedAt })
+      .from(userTable)
+      .where(eq(userTable.id, user.id))
+      .limit(1);
+    if (isUserDeleted(active)) {
+      user = null;
+    }
+  }
+
   if (!user && profile.email) {
     const [row] = await db
-      .select({ id: userTable.id })
+      .select({ id: userTable.id, deletedAt: userTable.deletedAt })
       .from(userTable)
-      .where(eq(userTable.email, profile.email))
+      .where(
+        and(eq(userTable.email, profile.email), isNull(userTable.deletedAt)),
+      )
       .limit(1);
     if (row) {
       user = await ctx.context.internalAdapter.findUserById(row.id);
@@ -83,6 +97,19 @@ export async function signInWithExternalProfile(
         accountId: profile.accountId,
         createdAt: new Date(),
         updatedAt: new Date(),
+      });
+    }
+  }
+
+  if (user) {
+    const [active] = await db
+      .select({ deletedAt: userTable.deletedAt })
+      .from(userTable)
+      .where(eq(userTable.id, user.id))
+      .limit(1);
+    if (isUserDeleted(active)) {
+      throw APIError.fromStatus("FORBIDDEN", {
+        message: "Account is not available",
       });
     }
   }
