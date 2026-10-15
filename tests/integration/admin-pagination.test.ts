@@ -1,6 +1,7 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "@/lib/db/client";
-import { feedPosts } from "@/lib/db/schema";
+import { feedPosts, user } from "@/lib/db/schema";
 import { listAllFeedPostsForAdmin } from "@/lib/feed/queries";
 import {
   listAdminSessions,
@@ -74,6 +75,22 @@ run("admin pagination", () => {
     const found = await listParticipants("runner", { page: 2, size: 10 });
     expect(found.total).toBe(11);
     expect(found.items).toHaveLength(1);
+  });
+
+  it("participants: hides deleted users", async () => {
+    await seedUser("alive");
+    await seedUser("gone");
+    await db
+      .update(user)
+      .set({ deletedAt: new Date(), name: "Gone Runner" })
+      .where(eq(user.id, "gone"));
+
+    const all = await listParticipants("", { page: 1, size: 10 });
+    expect(all.items.map((row) => row.id)).toEqual(["alive"]);
+    expect(all.total).toBe(1);
+
+    const byName = await listParticipants("Gone", { page: 1, size: 10 });
+    expect(byName.total).toBe(0);
   });
 
   it("payments: unpaid includes past trainings, newest first", async () => {

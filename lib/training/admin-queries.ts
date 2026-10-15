@@ -18,6 +18,7 @@ import {
   type PageRequest,
   paginate,
 } from "@/lib/admin/pagination";
+import { activeUserCondition } from "@/lib/auth/user-active";
 import { db } from "@/lib/db/client";
 import { countRows } from "@/lib/db/count-rows";
 import {
@@ -284,13 +285,14 @@ export async function listUnpaid(request: PageRequest) {
   );
 }
 
-/** Все участники (поиск по имени или email), с числом записей. */
+/** Все участники (поиск по имени или email), с числом записей. Удалённые скрыты. */
 export async function listParticipants(query: string, request: PageRequest) {
   const q = query.trim();
   const pattern = `%${q.replace(/[%_\\]/g, "\\$&")}%`;
-  const where = q
+  const search = q
     ? or(ilike(user.name, pattern), ilike(user.email, pattern))
     : undefined;
+  const where = and(activeUserCondition(), search);
   return paginate(
     request,
     () => countRows(user, where),
