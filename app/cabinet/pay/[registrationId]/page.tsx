@@ -16,7 +16,10 @@ export default async function CheckoutPage({ params }: Props) {
   }
 
   const { registrationId } = await params;
-  const checkout = await ensurePaymentForRegistration(registrationId);
+  const checkout = await ensurePaymentForRegistration(
+    registrationId,
+    session.user.id,
+  );
   if (!checkout.ok) {
     notFound();
   }

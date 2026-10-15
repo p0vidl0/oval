@@ -28,12 +28,18 @@ export async function getPaymentByRegistrationId(registrationId: string) {
   return rows[0] ?? null;
 }
 
-export async function ensurePaymentForRegistration(registrationId: string) {
+export async function ensurePaymentForRegistration(
+  registrationId: string,
+  userId: string,
+) {
   const row = await getRegistrationWithSession(registrationId);
   if (!row) {
     return { ok: false as const, error: "Запись не найдена" };
   }
   const { registration, session } = row;
+  if (registration.userId !== userId) {
+    return { ok: false as const, error: "Запись не найдена" };
+  }
 
   if (registration.status === "paid") {
     return {

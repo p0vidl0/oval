@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { authErrorText } from "@/lib/auth/auth-error-text";
 import { authClient } from "@/lib/auth/client";
+import { safeInternalPath } from "@/lib/site/safe-internal-path";
 
 function TelegramCompleteInner() {
   const router = useRouter();
@@ -36,7 +37,7 @@ function TelegramCompleteInner() {
         );
         return;
       }
-      router.replace(next.startsWith("/") ? next : "/cabinet");
+      router.replace(safeInternalPath(next));
       router.refresh();
     })();
 

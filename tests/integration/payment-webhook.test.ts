@@ -1,5 +1,8 @@
+import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { POST } from "@/app/api/webhooks/payment/[provider]/route";
+import { db } from "@/lib/db/client";
+import { payments } from "@/lib/db/schema";
 import {
   seedPendingPayment,
   seedPublishedAnnouncement,
@@ -76,5 +79,67 @@ run("payment webhook route", () => {
     });
     const body2 = await res2.json();
     expect(body2.alreadyProcessed).toBe(true);
+  });
+
+  it("ignores a payload without status", async () => {
+    const userId = await seedUser("wh-user-nostatus");
+    const { sessionId } = await seedPublishedAnnouncement({ priceCents: 5000 });
+    const regId = await seedRegistration(userId, sessionId);
+    const paymentId = await seedPendingPayment(userId, regId, 5000);
+
+    const req = new Request("http://localhost/api/webhooks/payment/mock", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-webhook-secret",
+      },
+      body: JSON.stringify({
+        event_id: "wh-evt-no-status",
+        payment_id: paymentId,
+      }),
+    });
+    const res = await POST(req, {
+      params: Promise.resolve({ provider: "mock" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ignored).toBe(true);
+
+    const rows = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.id, paymentId));
+    expect(rows[0]?.status).toBe("pending");
+  });
+
+  it("rejects a mismatched amount", async () => {
+    const userId = await seedUser("wh-user-amount");
+    const { sessionId } = await seedPublishedAnnouncement({ priceCents: 5000 });
+    const regId = await seedRegistration(userId, sessionId);
+    const paymentId = await seedPendingPayment(userId, regId, 5000);
+
+    const req = new Request("http://localhost/api/webhooks/payment/mock", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-webhook-secret",
+      },
+      body: JSON.stringify({
+        event_id: "wh-evt-amount",
+        payment_id: paymentId,
+        status: "succeeded",
+        amount_cents: 1,
+      }),
+    });
+    const res = await POST(req, {
+      params: Promise.resolve({ provider: "mock" }),
+    });
+    expect(res.status).toBe(422);
+
+    const rows = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.id, paymentId));
+    expect(rows[0]?.status).toBe("pending");
   });
 });

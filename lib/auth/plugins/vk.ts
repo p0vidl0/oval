@@ -10,6 +10,7 @@ import {
 import { processVkLinkIfNeeded } from "@/lib/auth/link-callback";
 import { isVkConfigured } from "@/lib/auth/vk/config";
 import { createVkAuthorization, exchangeVkCode } from "@/lib/auth/vk/oauth";
+import { safeInternalPath } from "@/lib/site/safe-internal-path";
 
 function loginUrl(baseUrl: string): URL {
   return new URL("/login", baseUrl);
@@ -113,7 +114,7 @@ export const vk = () => {
               image: profile.image,
             },
           );
-          const destination = next?.startsWith("/") ? next : "/cabinet";
+          const destination = safeInternalPath(next);
           throw ctx.redirect(new URL(destination, baseUrl).toString());
         },
       ),

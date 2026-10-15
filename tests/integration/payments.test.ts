@@ -23,11 +23,28 @@ run("payments", () => {
       priceCents: 25000,
     });
     const regId = await seedRegistration(userId, sessionId);
-    const ensured = await ensurePaymentForRegistration(regId);
+    const ensured = await ensurePaymentForRegistration(regId, userId);
     expect(ensured.ok).toBe(true);
     if (!ensured.ok || !ensured.payment) return;
     expect(ensured.payment.amountCents).toBe(25000);
     expect(ensured.payment.status).toBe("pending");
+  });
+
+  it("ensurePaymentForRegistration does not create a payment for another user", async () => {
+    const ownerId = await seedUser("pay-owner");
+    const strangerId = await seedUser("pay-stranger");
+    const { sessionId } = await seedPublishedAnnouncement({
+      priceCents: 25000,
+    });
+    const regId = await seedRegistration(ownerId, sessionId);
+    const ensured = await ensurePaymentForRegistration(regId, strangerId);
+    expect(ensured.ok).toBe(false);
+
+    const rows = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.registrationId, regId));
+    expect(rows).toHaveLength(0);
   });
 
   it("confirmPaymentSucceeded updates registration and is idempotent", async () => {

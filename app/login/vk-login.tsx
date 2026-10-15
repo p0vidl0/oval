@@ -4,10 +4,11 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { authErrorText } from "@/lib/auth/auth-error-text";
 import { authClient } from "@/lib/auth/client";
+import { safeInternalPath } from "@/lib/site/safe-internal-path";
 
 export function VkLogin() {
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/cabinet";
+  const next = safeInternalPath(searchParams.get("next"));
   const failed = searchParams.get("error") === "vk";
 
   const [error, setError] = useState<string | null>(

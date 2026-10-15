@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { authErrorText } from "@/lib/auth/auth-error-text";
 import { authClient } from "@/lib/auth/client";
+import { safeInternalPath } from "@/lib/site/safe-internal-path";
 import { useTelegramMiniApp } from "@/lib/telegram/mini-app-context";
 
 type Props = {
@@ -12,7 +13,7 @@ type Props = {
 
 export function TelegramLogin({ oidcConfigured }: Props) {
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/cabinet";
+  const next = safeInternalPath(searchParams.get("next"));
   const {
     isMiniApp,
     authPending,

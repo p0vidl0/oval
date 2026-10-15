@@ -4,6 +4,7 @@ import {
   handleTelegramUpdate,
   type TelegramUpdate,
 } from "@/lib/bots/telegram/webhook";
+import { secretsMatch } from "@/lib/security/timing-safe-secret";
 
 export async function POST(request: Request) {
   const secret = getTelegramWebhookSecret();
@@ -14,8 +15,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const url = new URL(request.url);
-  if (url.searchParams.get("secret") !== secret) {
+  const presented = request.headers.get("x-telegram-bot-api-secret-token");
+  if (!presented || !secretsMatch(presented, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

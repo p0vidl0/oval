@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { canAccessAdmin } from "@/lib/auth/roles";
 import { getServerSession } from "@/lib/auth/session";
 import { publishSessionRegistrationsChanged } from "@/lib/realtime/publish-session-registrations-changed";
+import { safeInternalPath } from "@/lib/site/safe-internal-path";
 import { cancelUserRegistration } from "@/lib/training/registrations";
 
 export async function cancelRegistrationForm(formData: FormData) {
@@ -13,7 +14,9 @@ export async function cancelRegistrationForm(formData: FormData) {
     redirect("/login");
   }
   const registrationId = String(formData.get("registration_id") ?? "");
-  const returnTo = String(formData.get("return_to") ?? "/cabinet");
+  const returnTo = safeInternalPath(
+    String(formData.get("return_to") ?? "/cabinet"),
+  );
   const isAdmin = canAccessAdmin(session.user.role as string | undefined);
   const result = await cancelUserRegistration(
     registrationId,
@@ -21,7 +24,9 @@ export async function cancelRegistrationForm(formData: FormData) {
     isAdmin,
   );
   if (!result.ok) {
-    redirect(`${returnTo}?error=${encodeURIComponent(result.error)}`);
+    const failed = new URL(returnTo, "https://internal.invalid");
+    failed.searchParams.set("error", result.error);
+    redirect(`${failed.pathname}${failed.search}`);
   }
   await publishSessionRegistrationsChanged(result.sessionId);
   revalidatePath("/cabinet");

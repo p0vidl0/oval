@@ -71,13 +71,21 @@ Env (see [`.docker/env/oval-dev.local.env.example`](../../.docker/env/oval-dev.l
 
 - **OIDC (сайт):** `TELEGRAM_OIDC_CLIENT_ID`, `TELEGRAM_OIDC_CLIENT_SECRET` — из @BotFather mini app → Bot Settings → **Web Login** (не путать с bot token).
 - **Бот (deep link):** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`.
-- **Webhook бота:** `TELEGRAM_WEBHOOK_SECRET` — query `secret` для `POST /api/webhooks/telegram`.
+- **Webhook бота:** `TELEGRAM_WEBHOOK_SECRET` — заголовок `X-Telegram-Bot-Api-Secret-Token` на `POST /api/webhooks/telegram`. В query секрет не передавать.
 
 Prod / staging (OIDC):
 
 1. Web Login → **Allowed URLs**: origin сайта (например `https://example.com`) и redirect  
    `https://<host>/api/auth/sign-in/telegram/oidc/callback`.
-2. `setWebhook` → `https://<host>/api/webhooks/telegram?secret=<TELEGRAM_WEBHOOK_SECRET>` (для входа через бота).
+2. `setWebhook` для входа через бота — вручную, тем, у кого есть `TELEGRAM_BOT_TOKEN` (приложение и GitHub Actions это не вызывают). URL без секрета, секрет в `secret_token` (только `A–Z`, `a–z`, `0–9`, `_`, `-`):
+
+```bash
+curl -X POST "https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/setWebhook" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://<host>/api/webhooks/telegram","secret_token":"<TELEGRAM_WEBHOOK_SECRET>"}'
+```
+
+Если Bot API ходит через `TELEGRAM_API_ROOT`, тот же JSON отправляется на `{TELEGRAM_API_ROOT}/bot<token>/setWebhook`. Пока в Bot API висит старый URL с `?secret=`, вход через бота отвечает 401. Mini App и OIDC этот вебхук не используют.
 
 На `localhost` OIDC нужен HTTPS-tunnel и те же URLs в BotFather; иначе — «Войти через Telegram (бот)».
 

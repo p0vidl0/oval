@@ -23,6 +23,7 @@ import {
 } from "@/lib/auth/telegram/sign-in";
 import { verifyTelegramIdToken } from "@/lib/auth/telegram/verify-id-token";
 import { verifyTelegramInitData } from "@/lib/auth/telegram/verify-init-data";
+import { safeInternalPath } from "@/lib/site/safe-internal-path";
 
 export const telegram = () => {
   return {
@@ -153,7 +154,7 @@ export const telegram = () => {
             profile,
           );
 
-          const destination = next?.startsWith("/") ? next : "/cabinet";
+          const destination = safeInternalPath(next);
           throw ctx.redirect(
             new URL(destination, ctx.context.baseURL).toString(),
           );

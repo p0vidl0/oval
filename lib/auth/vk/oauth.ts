@@ -14,6 +14,7 @@ import {
 } from "@/lib/auth/vk/profile";
 import { db } from "@/lib/db/client";
 import { verification } from "@/lib/db/schema/auth-schema";
+import { optionalSafeInternalPath } from "@/lib/site/safe-internal-path";
 
 const STATE_PREFIX = "vk-oauth:";
 const TTL_MS = 10 * 60 * 1000;
@@ -82,7 +83,7 @@ export async function createVkAuthorization(
   const codeVerifier = randomBytes(32).toString("base64url");
   const value: PendingOauth = {
     codeVerifier,
-    next: next?.startsWith("/") ? next : undefined,
+    next: optionalSafeInternalPath(next),
     linkToken: linkToken?.trim() || undefined,
   };
 

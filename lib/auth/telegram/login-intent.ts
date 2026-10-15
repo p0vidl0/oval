@@ -7,6 +7,7 @@ import {
 import type { TelegramLoginIntentRecord } from "@/lib/auth/telegram/types";
 import { db } from "@/lib/db/client";
 import { verification } from "@/lib/db/schema/auth-schema";
+import { optionalSafeInternalPath } from "@/lib/site/safe-internal-path";
 
 const INTENT_PREFIX = "telegram-login:";
 
@@ -45,7 +46,7 @@ export async function createTelegramLoginIntent(
   const identifier = telegramLoginIntentIdentifier(token);
   const value: TelegramLoginIntentRecord = {
     status: "pending",
-    next: next?.startsWith("/") ? next : undefined,
+    next: optionalSafeInternalPath(next),
     linkToken: linkToken?.trim() || undefined,
   };
   const expiresAt = new Date(Date.now() + ttlSec * 1000);

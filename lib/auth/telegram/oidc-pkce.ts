@@ -10,6 +10,7 @@ import {
 import { verifyTelegramIdToken } from "@/lib/auth/telegram/verify-id-token";
 import { db } from "@/lib/db/client";
 import { verification } from "@/lib/db/schema/auth-schema";
+import { optionalSafeInternalPath } from "@/lib/site/safe-internal-path";
 
 const STATE_PREFIX = "telegram-oidc:";
 const TTL_MS = 10 * 60 * 1000;
@@ -69,7 +70,7 @@ export async function createTelegramOidcAuthorization(
   const identifier = `${STATE_PREFIX}${state}`;
   const value: PendingOidc = {
     codeVerifier,
-    next: next?.startsWith("/") ? next : undefined,
+    next: optionalSafeInternalPath(next),
     linkToken: linkToken?.trim() || undefined,
   };
 

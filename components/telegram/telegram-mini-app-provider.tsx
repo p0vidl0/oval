@@ -5,6 +5,7 @@ import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { trackAnalyticsEvent } from "@/lib/analytics/client-track";
 import { authErrorText } from "@/lib/auth/auth-error-text";
 import { authClient } from "@/lib/auth/client";
+import { safeInternalPath } from "@/lib/site/safe-internal-path";
 import {
   TelegramMiniAppContext,
   type TelegramMiniAppContextValue,
@@ -191,8 +192,8 @@ export function TelegramMiniAppProvider({ children }: { children: ReactNode }) {
         });
 
         const next = nextRef.current;
-        if (pathnameRef.current === "/login" && next?.startsWith("/")) {
-          window.location.replace(next);
+        if (pathnameRef.current === "/login" && next) {
+          window.location.replace(safeInternalPath(next));
           return;
         }
         routerRef.current.refresh();

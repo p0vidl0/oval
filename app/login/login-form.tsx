@@ -7,6 +7,7 @@ import { trackAnalyticsEvent } from "@/lib/analytics/client-track";
 import { authErrorText } from "@/lib/auth/auth-error-text";
 import { authClient } from "@/lib/auth/client";
 import { normalizeEmail } from "@/lib/auth/email";
+import { safeInternalPath } from "@/lib/site/safe-internal-path";
 
 type Step = "email" | "code";
 
@@ -25,7 +26,7 @@ const RESEND_SECONDS = 60;
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/cabinet";
+  const next = safeInternalPath(searchParams.get("next"));
 
   const [step, setStep] = useState<Step>("email");
   const [emailInput, setEmailInput] = useState("");
