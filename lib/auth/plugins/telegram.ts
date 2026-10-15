@@ -4,6 +4,7 @@ import {
   formCsrfMiddleware,
 } from "better-auth/api";
 import { processTelegramLinkIfNeeded } from "@/lib/auth/link-callback";
+import { adoptLegacyTelegramOidcAccount } from "@/lib/auth/telegram/adopt-legacy-account";
 import {
   isTelegramBotLoginConfigured,
   isTelegramMiniAppConfigured,
@@ -87,6 +88,8 @@ export const telegram = () => {
             });
           }
 
+          await adoptLegacyTelegramOidcAccount(profile);
+
           return ctx.json(
             await signInWithTelegramProfile(
               ctx as unknown as TelegramSignInContext,
@@ -139,6 +142,8 @@ export const telegram = () => {
               message: "Invalid Telegram profile",
             });
           }
+
+          await adoptLegacyTelegramOidcAccount(profile);
 
           const linkRedirect = await processTelegramLinkIfNeeded(
             ctx.context.baseURL,
