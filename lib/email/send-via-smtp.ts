@@ -8,14 +8,17 @@ function smtpTransportOptions() {
   const from = process.env.SMTP_FROM?.trim() || "oval@localhost.localdomain";
 
   const secureExplicit = process.env.SMTP_SECURE?.trim();
+  const mailslurperSmtps = port === 1025 && host === "mailslurper";
   const secure =
     secureExplicit === "1"
       ? true
       : secureExplicit === "0"
         ? false
-        : port === 465;
+        : mailslurperSmtps || port === 465;
 
-  const localDevRelay = host === "127.0.0.1" && port === 1025;
+  const localDevRelay =
+    port === 1025 &&
+    (host === "127.0.0.1" || host === "mailslurper" || host === "mailpit");
 
   return {
     from,

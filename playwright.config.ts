@@ -31,8 +31,13 @@ export default defineConfig({
             DATABASE_URL:
               process.env.DATABASE_URL ??
               `postgresql://oval:oval@localhost:15434/oval`,
-            EMAIL_PROVIDER: "recording",
-            OVAL_TEST_API: "1",
+            EMAIL_PROVIDER: process.env.EMAIL_PROVIDER ?? "smtp",
+            SMTP_HOST: process.env.SMTP_HOST ?? "127.0.0.1",
+            SMTP_PORT: process.env.SMTP_PORT ?? "11026",
+            SMTP_FROM: process.env.SMTP_FROM ?? "oval@localhost.localdomain",
+            OVAL_DISABLE_OTP_LIMITS: process.env.OVAL_DISABLE_OTP_LIMITS ?? "1",
+            OVAL_DISABLE_AUTH_RATE_LIMIT:
+              process.env.OVAL_DISABLE_AUTH_RATE_LIMIT ?? "1",
             PAYMENT_PROVIDER: "mock",
             PAYMENT_WEBHOOK_SECRET:
               process.env.PAYMENT_WEBHOOK_SECRET ?? "test-webhook-secret",

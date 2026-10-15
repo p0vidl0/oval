@@ -7,8 +7,8 @@ Sign-in OTP: [`lib/email/send-otp.ts`](../../lib/email/send-otp.ts) → SMTP via
 | Value | Use |
 |-------|-----|
 | `stub` | Dev: log OTP to console |
-| `recording` | Integration / e2e: in-memory store + [`/api/test/email/latest`](../../app/api/test/email/latest/route.ts) |
-| `smtp` | Production (Yandex Postbox or Mailpit) |
+| `recording` | Integration: in-memory [`recording-store`](../../lib/email/recording-store.ts) |
+| `smtp` | Production (Yandex Postbox) or e2e (MailSlurper) |
 
 ## Production (Yandex Postbox)
 
@@ -16,7 +16,6 @@ Set on the app host (secrets manager / env, never commit):
 
 ```bash
 EMAIL_PROVIDER=smtp
-OVAL_TEST_API=0
 
 SMTP_HOST=postbox.cloud.yandex.net   # use value from Postbox console
 SMTP_PORT=587                        # or 465 with SMTP_SECURE=1
@@ -32,7 +31,7 @@ SMTP delivery does not block the auth response: the OTP is stored, the HTTP hand
 
 ### OTP send limits (SMTP only)
 
-Applied when `EMAIL_PROVIDER=smtp` and `OVAL_TEST_API` is not `1`:
+Applied when `EMAIL_PROVIDER=smtp` and `OVAL_DISABLE_OTP_LIMITS` is not `1`:
 
 | Env | Default | Meaning |
 |-----|---------|---------|
@@ -56,9 +55,9 @@ BETTER_AUTH_TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12
 
 (comma-separated CIDRs or IPs). Without this, IP rate limits may collapse to one bucket.
 
-## Local / Mailpit
+## Local / MailSlurper (e2e)
 
-Profile env already sets `SMTP_HOST=127.0.0.1`, `SMTP_PORT` from `MAILPIT_SMTP_HOST_PORT`. No `SMTP_USER` / `SMTP_PASS` required.
+Profile `oval-e2e`: app container → `SMTP_HOST=mailslurper`, `SMTP_PORT=1025`, **`SMTP_SECURE=1`** (implicit TLS on 1025, same as corelayer MailSlurper). Playwright on host → MailSlurper API (`MAILSLURPER_API_HOST_PORT`). No `SMTP_USER` / `SMTP_PASS` required. Plain SMTP on 1025 will hang until nodemailer times out (~10s).
 
 ## Runbook (abuse / quota)
 

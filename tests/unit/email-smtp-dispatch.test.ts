@@ -10,12 +10,12 @@ import { sendViaSmtp } from "@/lib/email/send-via-smtp";
 describe("sendAuthEmailOtp smtp", () => {
   const prev = {
     provider: process.env.EMAIL_PROVIDER,
-    testApi: process.env.OVAL_TEST_API,
+    disableLimits: process.env.OVAL_DISABLE_OTP_LIMITS,
   };
 
   afterEach(() => {
     process.env.EMAIL_PROVIDER = prev.provider;
-    process.env.OVAL_TEST_API = prev.testApi;
+    process.env.OVAL_DISABLE_OTP_LIMITS = prev.disableLimits;
     vi.mocked(sendViaSmtp).mockReset();
   });
 
@@ -27,7 +27,7 @@ describe("sendAuthEmailOtp smtp", () => {
     vi.mocked(sendViaSmtp).mockReturnValue(pending);
 
     process.env.EMAIL_PROVIDER = "smtp";
-    process.env.OVAL_TEST_API = "1";
+    process.env.OVAL_DISABLE_OTP_LIMITS = "1";
 
     const started = Date.now();
     await sendAuthEmailOtp("rider@example.com", "123456");

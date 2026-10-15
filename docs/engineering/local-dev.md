@@ -49,7 +49,7 @@ pnpm run task -- test-integration
 ## E2E
 
 ```bash
-pnpm run task -- e2e-up      # Postgres + mailpit + migrate + next start in Docker (-d)
+pnpm run task -- e2e-up      # Postgres + MailSlurper + migrate + next start in Docker (-d)
 pnpm run task -- test-e2e    # e2e-up + seed + Playwright (stack down after success)
 # debug after failure: KEEP_E2E_STACK=1 pnpm run task -- test-e2e
 pnpm run task -- e2e-down

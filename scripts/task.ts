@@ -34,7 +34,7 @@ oval task runner — pnpm run task -- <command>
   test-all                 test:unit + test-integration
   test-manual              validate + test-all + test-e2e
   test-integration         Isolated oval-integration stack + vitest integration
-  e2e-up                   oval-e2e: Postgres + mailpit + migrate + app (-d)
+  e2e-up                   oval-e2e: Postgres + MailSlurper + migrate + app (-d)
   e2e-down                 Tear down oval-e2e
   test-e2e                 e2e-up + seed + Playwright (app in Docker)
 
@@ -245,7 +245,7 @@ function e2eEnsureInfra(): number {
     "--wait-timeout",
     "120",
     "postgres",
-    "mailpit",
+    "mailslurper",
   ]);
 }
 
@@ -335,7 +335,7 @@ function waitForHttpOk(url: string, timeoutMs = 60_000): boolean {
 function testE2e(): number {
   let exitCode = 0;
   try {
-    logE2eStep("Starting Docker (oval-e2e: Postgres, mailpit, app)…");
+    logE2eStep("Starting Docker (oval-e2e: Postgres, MailSlurper, app)…");
     if (e2eUp() !== 0) {
       exitCode = 1;
       return exitCode;

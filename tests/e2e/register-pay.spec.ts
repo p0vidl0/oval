@@ -1,10 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { loginWithEmailOtp } from "./helpers/login";
+import { latestPaymentIdForRegistration } from "./helpers/payments";
 
 test("login, register, webhook pay, cabinet", async ({ page, request }) => {
   const email = `e2e-${Date.now()}@oval.test`;
 
-  await loginWithEmailOtp(page, request, email, "/feed");
+  await loginWithEmailOtp(page, email, "/feed");
 
   // Новый пользователь без имени: перед первой записью спрашиваем имя.
   await page.getByRole("button", { name: "Записаться" }).first().click();
@@ -22,11 +23,7 @@ test("login, register, webhook pay, cabinet", async ({ page, request }) => {
   expect(regMatch?.[1]).toBeTruthy();
   const registrationId = regMatch?.[1] ?? "";
 
-  const latestPay = await request.get(
-    `/api/test/payments/latest?registration_id=${registrationId}`,
-  );
-  expect(latestPay.ok()).toBeTruthy();
-  const { payment_id: paymentId } = await latestPay.json();
+  const paymentId = await latestPaymentIdForRegistration(registrationId);
 
   const secret = process.env.PAYMENT_WEBHOOK_SECRET ?? "test-webhook-secret";
   const wh = await request.post("/api/webhooks/payment/mock", {

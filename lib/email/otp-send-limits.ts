@@ -7,7 +7,6 @@ import {
   decideOtpSendAllowed,
   readOtpSendLimitConfig,
 } from "@/lib/email/otp-send-limit-policy";
-import { isTestApiEnabled } from "@/lib/test-api";
 
 const MS_HOUR = 3_600_000;
 const MS_DAY = 86_400_000;
@@ -20,9 +19,9 @@ export {
   readOtpSendLimitConfig,
 } from "@/lib/email/otp-send-limit-policy";
 
-/** SMTP prod limits; off for stub/recording and when test API is on. */
+/** SMTP prod limits; off for stub/recording and when explicitly disabled (e2e). */
 export function otpSendLimitsEnabled(): boolean {
-  if (isTestApiEnabled()) return false;
+  if (process.env.OVAL_DISABLE_OTP_LIMITS === "1") return false;
   return (process.env.EMAIL_PROVIDER?.trim() || "stub") === "smtp";
 }
 

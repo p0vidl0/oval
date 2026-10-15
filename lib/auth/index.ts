@@ -19,7 +19,7 @@ export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET,
   ...(Object.keys(advanced).length > 0 ? { advanced } : {}),
   rateLimit:
-    process.env.OVAL_TEST_API === "1"
+    process.env.OVAL_DISABLE_AUTH_RATE_LIMIT === "1"
       ? { enabled: false }
       : {
           customRules: {
@@ -62,7 +62,7 @@ export const auth = betterAuth({
       allowedAttempts: 3,
       resendStrategy: "reuse",
       rateLimit:
-        process.env.OVAL_TEST_API === "1"
+        process.env.OVAL_DISABLE_AUTH_RATE_LIMIT === "1"
           ? { window: 60, max: 500 }
           : { window: 600, max: 5 },
       sendVerificationOTP: async ({ email, otp }) => {

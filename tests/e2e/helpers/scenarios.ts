@@ -107,6 +107,10 @@ export async function seedE2eScenario(
   scenario: E2eSeedScenario,
   runId: string,
 ): Promise<E2eSeedResult> {
+  if (!process.env.DATABASE_URL?.trim()) {
+    throw new Error("DATABASE_URL is required for e2e seed helpers");
+  }
+
   const suffix = runId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
 
   if (scenario === "email-merge-victim") {

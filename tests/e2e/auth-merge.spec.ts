@@ -1,26 +1,28 @@
 import { expect, test } from "@playwright/test";
 import {
   loginWithEmailOtp,
-  loginWithTelegramBot,
   parseTelegramLoginIntentToken,
   waitForEmailOtp,
 } from "./helpers/login";
+import { countAuthOtpMails } from "./helpers/mailslurper";
+import { seedE2eScenario } from "./helpers/scenarios";
+import {
+  loginWithTelegramBot,
+  simulateTelegramBotStart,
+} from "./helpers/telegram-auth";
 
 test.describe("auth link and user merge", () => {
   test.setTimeout(60_000);
-  test("cabinet: link email triggers self-merge confirm", async ({
-    page,
-    request,
-  }) => {
+
+  test("cabinet: link email triggers self-merge confirm", async ({ page }) => {
     const runId = `em-${Date.now()}`;
-    const seedRes = await request.post("/api/test/e2e/seed", {
-      data: { scenario: "email-merge-victim", runId },
-    });
-    expect(seedRes.ok()).toBeTruthy();
-    const { victimEmail } = (await seedRes.json()) as { victimEmail: string };
+    const victimSeed = await seedE2eScenario("email-merge-victim", runId);
+    expect(victimSeed.scenario).toBe("email-merge-victim");
+    if (victimSeed.scenario !== "email-merge-victim") return;
+    const { victimEmail } = victimSeed;
 
     const telegramUserId = 910_000_000 + (Date.now() % 89_000_000);
-    await loginWithTelegramBot(page, request, telegramUserId, "/cabinet");
+    await loginWithTelegramBot(page, telegramUserId, "/cabinet");
 
     await page.goto("/cabinet#auth-methods");
     await expect(page.getByTestId("auth-methods")).toBeVisible({
@@ -31,13 +33,14 @@ test.describe("auth link and user merge", () => {
       timeout: 10_000,
     });
 
+    const linkBaseline = await countAuthOtpMails(victimEmail);
     await page.getByTestId("auth-link-email-input").fill(victimEmail);
     await page.getByRole("button", { name: "Получить код" }).click();
     await expect(page.getByTestId("auth-link-otp-input")).toBeVisible({
       timeout: 15_000,
     });
 
-    const otp = await waitForEmailOtp(request, victimEmail);
+    const otp = await waitForEmailOtp(victimEmail, linkBaseline);
     await page.getByTestId("auth-link-otp-input").fill(otp);
     await page.getByRole("button", { name: "Подтвердить" }).click();
 
@@ -48,10 +51,10 @@ test.describe("auth link and user merge", () => {
     await expect(page.getByTestId("auth-link-add-email")).toHaveCount(0);
   });
 
-  test("cabinet: link Telegram via bot intent", async ({ page, request }) => {
+  test("cabinet: link Telegram via bot intent", async ({ page }) => {
     const runId = `tg-${Date.now()}`;
     const actorEmail = `e2e-tg-${runId}@oval.test`;
-    await loginWithEmailOtp(page, request, actorEmail, "/cabinet");
+    await loginWithEmailOtp(page, actorEmail, "/cabinet");
 
     await page.goto("/cabinet#auth-methods");
     await page.getByTestId("auth-link-add-telegram").click();
@@ -63,42 +66,21 @@ test.describe("auth link and user merge", () => {
     const intentToken = parseTelegramLoginIntentToken(href ?? "");
 
     const telegramUserId = 900_000_000 + (Date.now() % 99_000_000);
-    const sim = await request.post("/api/test/telegram/simulate-start", {
-      data: {
-        intentToken,
-        telegramUserId,
-        firstName: "E2E TG",
-      },
-    });
-    expect(sim.ok()).toBeTruthy();
+    await simulateTelegramBotStart(intentToken, telegramUserId, "E2E TG");
 
     await page.waitForURL(/\/cabinet.*link=ok/, { timeout: 30_000 });
     await expect(page.getByTestId("auth-methods")).toContainText("Telegram");
     await expect(page.getByTestId("auth-link-add-telegram")).toHaveCount(0);
   });
 
-  test("admin: merge preview blocks payment conflict", async ({
-    page,
-    request,
-  }) => {
+  test("admin: merge preview blocks payment conflict", async ({ page }) => {
     const runId = `conf-${Date.now()}`;
-    const seedRes = await request.post("/api/test/e2e/seed", {
-      data: { scenario: "admin-payment-conflict", runId },
-    });
-    expect(seedRes.ok()).toBeTruthy();
-    const { superAdminEmail, targetSearch, sourceSearch } =
-      (await seedRes.json()) as {
-        superAdminEmail: string;
-        targetSearch: string;
-        sourceSearch: string;
-      };
+    const conflictSeed = await seedE2eScenario("admin-payment-conflict", runId);
+    expect(conflictSeed.scenario).toBe("admin-payment-conflict");
+    if (conflictSeed.scenario !== "admin-payment-conflict") return;
+    const { superAdminEmail, targetSearch, sourceSearch } = conflictSeed;
 
-    await loginWithEmailOtp(
-      page,
-      request,
-      superAdminEmail,
-      "/admin/users/merge",
-    );
+    await loginWithEmailOtp(page, superAdminEmail, "/admin/users/merge");
     await expect(
       page.getByRole("heading", { name: "Склейка пользователей" }),
     ).toBeVisible();
@@ -124,25 +106,14 @@ test.describe("auth link and user merge", () => {
     await expect(page.getByTestId("admin-merge-execute")).toHaveCount(0);
   });
 
-  test("admin: merge without payment conflict", async ({ page, request }) => {
+  test("admin: merge without payment conflict", async ({ page }) => {
     const runId = `ok-${Date.now()}`;
-    const seedRes = await request.post("/api/test/e2e/seed", {
-      data: { scenario: "admin-merge-success", runId },
-    });
-    expect(seedRes.ok()).toBeTruthy();
-    const { superAdminEmail, targetSearch, sourceSearch } =
-      (await seedRes.json()) as {
-        superAdminEmail: string;
-        targetSearch: string;
-        sourceSearch: string;
-      };
+    const okSeed = await seedE2eScenario("admin-merge-success", runId);
+    expect(okSeed.scenario).toBe("admin-merge-success");
+    if (okSeed.scenario !== "admin-merge-success") return;
+    const { superAdminEmail, targetSearch, sourceSearch } = okSeed;
 
-    await loginWithEmailOtp(
-      page,
-      request,
-      superAdminEmail,
-      "/admin/users/merge",
-    );
+    await loginWithEmailOtp(page, superAdminEmail, "/admin/users/merge");
 
     await page.getByTestId("admin-merge-target-search").fill(targetSearch);
     const okTargetOption = page.getByRole("option", {

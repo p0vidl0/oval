@@ -20,5 +20,13 @@ services:
       retries: 10
       start_period: 5s
 
+  mailslurper:
+    image: ghcr.io/p0vidl0/mylslurper:2.0.0@sha256:b06b98c98231a0c70f46833b7acfc6d5fc546694bd791967f6765ba79ef2c9d2
+    restart: unless-stopped
+    ports:
+      - "${MAILSLURPER_UI_HOST_PORT:-4436}:4436"
+      - "${MAILSLURPER_API_HOST_PORT:-4437}:4437"
+      - "${MAILSLURPER_SMTP_HOST_PORT:-1025}:1025"
+
 volumes:
   postgres_data:

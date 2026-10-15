@@ -40,7 +40,7 @@ Stack: **Next.js App Router**, **Better Auth** (`lib/auth/`), **Drizzle** (`lib/
 - Training ↔ posts: posts reference the training via `feed_posts.related_session_id` (announcement, reschedule, cancel; max one announcement per training). Training changes are logged in `training_session_events`.
 - Local dev: `pnpm run task -- dev-up` — Postgres + **Next.js in Docker** (profile **oval-dev**, PG **5433**, app **3000**). Compose [`.docker/`](../../.docker/); [`scripts/task.ts`](../../scripts/task.ts) / [`Makefile`](../../Makefile).
 - VPS prod: [`.deploy/`](../../.deploy/) + GitHub Actions `deploy-vps.yml` (GHCR, SSH, Traefik); см. [`.deploy/README.md`](../../.deploy/README.md).
-- Integration stack: **oval-integration** (`pnpm run task -- test-integration`); e2e: **oval-e2e** + mailpit (`pnpm run task -- test-e2e`) — Playwright в `tests/e2e/` (в т.ч. `auth-merge.spec.ts`: привязка email/Telegram, self-merge, admin merge). Сиды сценариев: `POST /api/test/e2e/seed` при `OVAL_TEST_API=1`; симуляция TG bot `/start`: `POST /api/test/telegram/simulate-start`. В профиле e2e заданы `TELEGRAM_BOT_TOKEN` + `TELEGRAM_BOT_USERNAME` (bot deep link, без OIDC).
+- Integration stack: **oval-integration** (`pnpm run task -- test-integration`, `EMAIL_PROVIDER=recording`); e2e: **oval-e2e** + **MailSlurper** (`pnpm run task -- test-e2e`) — Playwright в `tests/e2e/` (OTP через MailSlurper API, seed/оплаты/TG через `tests/e2e/helpers/*` и `DATABASE_URL`). В профиле e2e: `TELEGRAM_BOT_TOKEN` + `TELEGRAM_BOT_USERNAME` (bot deep link).
 - Payments: `lib/payments/`, webhook `app/api/webhooks/payment/[provider]/route.ts`, docs [`docs/engineering/payments.md`](../../docs/engineering/payments.md). Mock confirm — admin only.
 
 ## Roles

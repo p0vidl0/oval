@@ -4,7 +4,6 @@ import {
   recordOtpSend,
 } from "@/lib/email/otp-send-limits";
 import { recordEmailOtp } from "@/lib/email/recording-store";
-import { persistTestEmailOtp } from "@/lib/email/test-otp-persist";
 
 function authEmailContent(otp: string): { subject: string; text: string } {
   return {
@@ -21,12 +20,9 @@ export async function sendAuthEmailOtp(
   const provider = process.env.EMAIL_PROVIDER?.trim() || "stub";
   const { subject, text } = authEmailContent(otp);
 
-  if (provider === "recording" || process.env.OVAL_TEST_API === "1") {
+  if (provider === "recording") {
     recordEmailOtp(email, otp);
-    await persistTestEmailOtp(email, otp);
-    if (provider === "recording") {
-      return;
-    }
+    return;
   }
 
   if (provider === "smtp") {

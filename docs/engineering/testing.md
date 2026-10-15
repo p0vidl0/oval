@@ -17,19 +17,25 @@ Integration sets `OVAL_INTEGRATION=1` and `DATABASE_URL` from [`.docker/env/oval
 
 Integration / e2e: после **успеха** `test-integration` / `test-e2e` всегда `down -v`. При **ошибке** — тоже, кроме отладки: `KEEP_INTEGRATION_STACK=1` or `KEEP_E2E_STACK=1`. Отдельно поднять e2e: `e2e-up`.
 
-## Email OTP recording (tests)
+## Email OTP in tests
 
-- `EMAIL_PROVIDER=recording` — OTP stored in memory ([`lib/email/recording-store.ts`](../../lib/email/recording-store.ts)).
-- `OVAL_TEST_API=1` — enables test routes (only in integration/e2e profiles; **не** включать в prod compose). Gate — этот флаг, не `NODE_ENV` (e2e идёт через `next start`).
+| Stack | Delivery | How tests read OTP |
+|-------|----------|-------------------|
+| **integration** | `EMAIL_PROVIDER=recording` | In-process [`recording-store`](../../lib/email/recording-store.ts) |
+| **e2e** | `EMAIL_PROVIDER=smtp` → **MailSlurper** | [`tests/e2e/helpers/mailslurper.ts`](../../tests/e2e/helpers/mailslurper.ts) (HTTP API, как в corelayer) |
 
-| Route | Purpose |
-|-------|---------|
-| `GET /api/test/email/latest?email=…` | Last OTP for email |
-| `GET /api/test/payments/latest?registration_id=` | Payment id for e2e webhook |
+MailSlurper image: `ghcr.io/p0vidl0/mylslurper:2.0.0` in [`.docker/compose.infra.yaml`](../../.docker/compose.infra.yaml). Profile ports: `MAILSLURPER_*_HOST_PORT` in `oval-e2e`.
 
-Profiles: `oval-integration`, `oval-e2e` — recording + API on. `oval-dev` — `OVAL_TEST_API=0`.
+E2e app container uses `SMTP_HOST=mailslurper`; Playwright on the host uses `SMTP_PORT` / `MAILSLURPER_API_HOST_PORT` from [`.docker/env/oval-e2e.env`](../../.docker/env/oval-e2e.env).
 
-Prod / local with Mailpit: `EMAIL_PROVIDER=smtp`, `SMTP_HOST=127.0.0.1`, `SMTP_PORT=1025` (see profile `MAILPIT_SMTP_HOST_PORT`).
+## E2e helpers (no `/api/test/*`)
+
+| Helper | Role |
+|--------|------|
+| [`tests/e2e/helpers/scenarios.ts`](../../tests/e2e/helpers/scenarios.ts) | Seed users / merge scenarios via Drizzle + `DATABASE_URL` |
+| [`tests/e2e/helpers/mailslurper.ts`](../../tests/e2e/helpers/mailslurper.ts) | Poll OTP from MailSlurper |
+| [`tests/e2e/helpers/payments.ts`](../../tests/e2e/helpers/payments.ts) | Latest `payment_id` for webhook |
+| [`tests/e2e/helpers/telegram-auth.ts`](../../tests/e2e/helpers/telegram-auth.ts) | Bot intent + `POST /api/auth/sign-in/telegram/bot` |
 
 ## Payment webhook (integration / e2e)
 
@@ -37,7 +43,7 @@ Prod / local with Mailpit: `EMAIL_PROVIDER=smtp`, `SMTP_HOST=127.0.0.1`, `SMTP_P
 
 See [`payments.md`](payments.md).
 
-## E2E seed
+## E2e feed seed
 
 Before Playwright: `tsx tests/e2e/seed.ts` (called from `test-e2e`). Creates post **「E2E Night Ride」**.
 
@@ -49,7 +55,7 @@ tests/integration/    — Drizzle + Postgres
 tests/e2e/            — Playwright
 ```
 
-Helpers: [`tests/integration/helpers/`](../../tests/integration/helpers/).
+Helpers: [`tests/integration/helpers/`](../../tests/integration/helpers/), [`tests/e2e/helpers/`](../../tests/e2e/helpers/).
 
 ## CI
 

@@ -2,11 +2,11 @@
 
 | File | Purpose |
 |------|---------|
-| [`compose.infra.yaml`](compose.infra.yaml) | Postgres |
+| [`compose.infra.yaml`](compose.infra.yaml) | Postgres + MailSlurper |
 | [`compose.yaml`](compose.yaml) | **Dev:** Postgres + Next.js (`app`) |
 | [`compose.app.dev.yaml`](compose.app.dev.yaml) | Next.js dev container (included by `compose.yaml`) |
 | [`compose.test.yaml`](compose.test.yaml) | Integration tests (infra only) |
-| [`compose.e2e-support.yaml`](compose.e2e-support.yaml) | Mailpit for e2e |
+| [`compose.e2e-support.yaml`](compose.e2e-support.yaml) | Reserved (optional e2e-only services) |
 | [`compose.app.e2e.yaml`](compose.app.e2e.yaml) | E2E app (`next start`) |
 | [`Dockerfile.dev`](Dockerfile.dev) | Dev image for `app` |
 | [`Dockerfile.e2e`](Dockerfile.e2e) | Production image for e2e `app` |
@@ -23,4 +23,4 @@ Orchestration: [`pnpm run task`](../package.json) (see [`docs/engineering/local-
 
 **After dependency changes:** `make dev-restart` — recreates `app` and runs [dev-app-entrypoint.sh](dev-app-entrypoint.sh) (`pnpm install` when lockfile hash changes).
 
-**E2E:** `pnpm run task -- e2e-up` — Postgres, mailpit, migrate, `next start` in Docker (detached); `test-e2e` runs Playwright against it.
+**E2E:** `pnpm run task -- e2e-up` — Postgres, MailSlurper, migrate, `next start` in Docker (detached); `test-e2e` runs Playwright against it.

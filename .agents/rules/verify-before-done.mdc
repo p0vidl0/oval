@@ -23,7 +23,7 @@ When unsure — run the checks.
 |---------|------------------|
 | `app/**`, `lib/**`, `middleware.ts` | `pnpm run task -- validate` (or lint + build) |
 | `lib/training/**`, `lib/payments/**` | + `pnpm run test:unit`; if DB behavior changed → `pnpm run task -- test-integration` |
-| `app/api/webhooks/**`, `app/api/test/**` | `pnpm run task -- test-integration` |
+| `app/api/webhooks/**` | `pnpm run task -- test-integration` |
 | `lib/db/schema/**`, auth plugins | `pnpm run auth:generate` if Better Auth config changed; `pnpm run db:generate` if hand-edited schema; `pnpm run task -- db-migrate` or document why not |
 | `.docker/**`, `scripts/task.ts`, `.env.example` | Smoke: `pnpm run task -- dev-up` if stack changed |
 | `tests/**` | Run the suite you changed (unit / integration / e2e) |

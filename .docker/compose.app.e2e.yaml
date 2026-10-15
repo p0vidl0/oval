@@ -14,9 +14,18 @@ services:
         required: true
     environment:
       DATABASE_URL: postgresql://oval:${OVAL_DB_PASSWORD}@postgres:5432/oval
+      EMAIL_PROVIDER: smtp
+      SMTP_HOST: mailslurper
+      SMTP_PORT: "1025"
+      SMTP_FROM: oval@localhost.localdomain
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      SMTP_SECURE: "1"
     depends_on:
       postgres:
         condition: service_healthy
+      mailslurper:
+        condition: service_started
     healthcheck:
       test:
         [
