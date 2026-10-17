@@ -6,11 +6,19 @@ import { getServerSession } from "@/lib/auth/session";
 import { db } from "@/lib/db/client";
 import { user } from "@/lib/db/schema/auth-schema";
 
-export async function updateProfileName(formData: FormData) {
+export type ProfileFormState =
+  | { status: "idle" }
+  | { status: "saved" }
+  | { status: "error"; message: string };
+
+export async function updateProfileName(
+  _prev: ProfileFormState,
+  formData: FormData,
+): Promise<ProfileFormState> {
   const session = await getServerSession();
-  if (!session) throw new Error("Forbidden");
+  if (!session) return { status: "error", message: "Войдите заново" };
   const name = String(formData.get("name") ?? "").trim();
-  if (!name) throw new Error("Укажите имя");
+  if (!name) return { status: "error", message: "Укажите имя" };
   const rosterNameVisible =
     String(formData.get("roster_name_visible") ?? "visible") !== "hidden";
   await db
@@ -19,6 +27,7 @@ export async function updateProfileName(formData: FormData) {
     .where(eq(user.id, session.user.id));
   revalidatePath("/cabinet");
   revalidatePath("/feed", "layout");
+  return { status: "saved" };
 }
 
 /** Имя перед первой записью на тренировку (окно «Как вас записать?»). */

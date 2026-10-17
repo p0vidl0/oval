@@ -10,6 +10,7 @@ When a recurring pattern or workflow changes, **update the matching rule in `.ag
 | What changed | Rule file |
 |--------------|-----------|
 | App Router pages, server/client components, auth UI | `.agents/rules/app-workflow.mdc` |
+| Button pending/success feedback (no toasts) | `.agents/rules/button-feedback.mdc` |
 | Drizzle schema, migrations, Better Auth config | `.agents/rules/app-workflow.mdc` |
 | Docker compose, dev/integration profiles, task runner | `.agents/rules/app-workflow.mdc`, `docs/engineering/local-dev.md` |
 | When/how to run lint·build·test before “done” | `.agents/rules/verify-before-done.mdc` |

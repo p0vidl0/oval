@@ -160,6 +160,23 @@
     transform: rotate(360deg);
   }
 }
+.nl-button__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+.nl-button__status--in {
+  animation: nl-button-status-in 0.18s ease;
+}
+@keyframes nl-button-status-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
 
 /* Chip */
 .nl-chip {

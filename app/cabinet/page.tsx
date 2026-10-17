@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SignOutButton } from "@/app/cabinet/sign-out-button";
 import { AuthMethodsPanel } from "@/components/cabinet/auth-methods-panel";
+import { CabinetProfileForm } from "@/components/cabinet/profile-form";
 import { CancelRegistrationForm } from "@/components/nl/cancel-registration-form";
 import { NlDateStack } from "@/components/nl/date-stack";
 import { NlShell } from "@/components/nl/shell";
@@ -16,7 +17,6 @@ import { isTelegramBotLoginConfigured } from "@/lib/auth/telegram/config";
 import { isTelegramOidcConfigured } from "@/lib/auth/telegram/oidc-config";
 import { isVkConfigured } from "@/lib/auth/vk/config";
 import { historyStatus } from "@/lib/cabinet/history-status";
-import { updateProfileName } from "@/lib/cabinet/profile-actions";
 import { db } from "@/lib/db/client";
 import { user } from "@/lib/db/schema/auth-schema";
 import { getPreviousStartByRescheduledSessions } from "@/lib/feed/queries";
@@ -339,60 +339,11 @@ export default async function CabinetPage({ searchParams }: Props) {
             <section className="nl-cabinet-section">
               <h2 className="nl-display nl-cabinet-section__title">Профиль</h2>
               <div className="nl-aside-card nl-cabinet-profile-card">
-                <form action={updateProfileName} className="nl-field">
-                  <label className="nl-label" htmlFor="profile-name">
-                    Имя и фамилия
-                    <input
-                      id="profile-name"
-                      name="name"
-                      className="nl-input"
-                      defaultValue={session.user.name ?? ""}
-                    />
-                  </label>
-                  <p className="nl-field nl-cabinet-profile-card__email">
-                    <span className="nl-label">
-                      <span className="nl-show-desktop">Email для входа</span>
-                      <span className="nl-show-mobile">Email</span>
-                    </span>
-                    <span className="nl-input nl-input--mono nl-cabinet-profile-card__email-value">
-                      {session.user.email?.trim() || "Email не указан"}
-                    </span>
-                  </p>
-                  <fieldset className="nl-field nl-cabinet-roster-visibility">
-                    <legend className="nl-label">Имя в списке</legend>
-                    <div className="nl-segmented">
-                      <label className="nl-segmented__item">
-                        <input
-                          type="radio"
-                          className="nl-segmented__input"
-                          name="roster_name_visible"
-                          value="visible"
-                          defaultChecked={rosterNameVisible}
-                        />
-                        <span className="nl-segmented__text">Отображать</span>
-                      </label>
-                      <label className="nl-segmented__item">
-                        <input
-                          type="radio"
-                          className="nl-segmented__input"
-                          name="roster_name_visible"
-                          value="hidden"
-                          defaultChecked={!rosterNameVisible}
-                        />
-                        <span className="nl-segmented__text">Скрыть</span>
-                      </label>
-                    </div>
-                    <p className="caption nl-cabinet-roster-visibility__hint">
-                      Список участников виден на странице анонса.
-                    </p>
-                  </fieldset>
-                  <button
-                    type="submit"
-                    className="nl-button nl-button--primary nl-button--block"
-                  >
-                    Сохранить
-                  </button>
-                </form>
+                <CabinetProfileForm
+                  name={session.user.name ?? ""}
+                  email={session.user.email?.trim() || "Email не указан"}
+                  rosterNameVisible={rosterNameVisible}
+                />
               </div>
             </section>
 

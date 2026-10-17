@@ -1,0 +1,23 @@
+---
+description: Confirm saves and actions on the button, not with a toast
+globs: components/**/*.tsx,app/**/*.tsx,app/**/*.css
+alwaysApply: false
+---
+
+# Button feedback
+
+There is no toast system. Do not add one.
+
+## In-place submit
+
+The button is the confirmation.
+
+- While pending: `nl-button--pending`, `nl-button__spinner`, a pending label («Сохраняем…»), `disabled`, `aria-busy`.
+- After success on the same page: swap the label to «Сохранено» for about 2s. Fade it with `nl-button__status` + `nl-button__status--in`, then return to the idle label. Editing the form clears the success label immediately.
+- Expected validation errors stay on the form: a `caption` with `role="alert"` and `color: var(--cancel)`. Return `{ status: "error", message }` from the action; do not throw for bad input.
+
+Reference: `components/cabinet/profile-form.tsx`. A pending label alone is enough when the next screen is the result (`components/nl/feed-register-button.tsx`, `components/admin/publication-editor.tsx`).
+
+## Redirect after the action
+
+Admin saves that leave the form use `?done=` / `?error=` and `AdminBanner` (`components/admin/admin-badges.tsx`). Do not replace that with a toast.
