@@ -52,7 +52,7 @@ Better Auth: плагин **email OTP**; доставка через `lib/email/
 | 4 | Telegram Login Widget / deep link |
 | 5 | Max (бот / webhook, не классический OAuth сайта) |
 
-- Таблица **`accounts`**: `provider` + `external_id`; один `user` — несколько способов входа.
+- Таблица `accounts`: `provider` + `external_id`; один `user` — несколько способов входа.
 - Email — primary для входа; телефон в профиле — позже (уведомления).
 
 ### Email (prod)
@@ -135,7 +135,7 @@ Better Auth: плагин **email OTP**; доставка через `lib/email/
 
 ### Таблицы / сущности (черновик)
 
-- `bot_channels` — platform (`telegram` \| `max`), channel_id, credentials ref
+- `bot_channels` — platform (`telegram`  `max`), channel_id, credentials ref
 - `bot_publications` — post_id, platform, external_message_id, status
 - `accounts` — уже для auth linkage
 
@@ -160,8 +160,11 @@ Internal API (пример): `POST /api/internal/bot/register`, webhook payments
 - [x] **Auth email OTP** — OTP, сессии, профиль (имя — опц.)
 - [x] **Запись + оплата** — регистрация, checkout, mock/webhook; эквайринг TBD
 - [x] **Личный кабинет** — предстоящие / прошедшие, статус «ожидает оплаты»
+
 - [~] **Админка** — лента, анонсы, отмена/перенос (фаза 1); экспорт CSV — позже
+
 - [ ] **Интеграции ботов** — autopublish + register/pay (фаза 2+)
+
 - [~] **Расширение auth** — Telegram OIDC + bot login (email optional для TG); VK, link email — позже
 
 ---
@@ -251,14 +254,14 @@ oval/
 
 ### Фаза 3 — боты
 
-- [ ] Telegram: publish в канал, запись (deep link), статус оплаты в боте
+- [x] Telegram: publish в канал, запись (deep link), статус оплаты в боте
 - [ ] Max: то же по возможностям API
-- [ ] Привязка telegram/max к аккаунту
+- [x] Привязка telegram/max к аккаунту
 
 ### Фаза 4 — расширение auth и полировка
 
 - [ ] Magic link (доп. к OTP)
-- [ ] VK / Yandex OAuth
+- [x] VK / Yandex OAuth
 - [ ] Уведомления (SMS / мессенджер) об отмене и переносе
 - [ ] Docker Compose prod, мониторинг, бэкапы
 

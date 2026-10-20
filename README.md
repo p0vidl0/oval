@@ -20,11 +20,7 @@ pnpm run task -- dev-down # остановить app + Postgres
 
 Вход: http://localhost:3000/login — OTP в логе dev-сервера (`[email stub] …`).
 
-Роль editor/admin после первого входа:
-
-```bash
-pnpm run user:role -- you@example.com admin
-```
+Роли editor и admin назначает супер-админ в админке: `/admin/users`.
 
 ## Тесты
 
@@ -43,7 +39,6 @@ pnpm run task -- test-integration   # стек oval-integration + vitest
 | `pnpm run build` | Production build |
 | `pnpm run auth:generate` | Better Auth Drizzle schema |
 | `pnpm run db:migrate` | Migrations (нужен `DATABASE_URL`) |
-| `pnpm run user:role` | Назначить роль по телефону |
 
 ## Агенты
 

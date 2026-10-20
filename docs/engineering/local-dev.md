@@ -37,7 +37,7 @@ Generated env: `.docker/env/<project>.env` via `pnpm run task -- render-env [pro
 
 Secrets: [`.docker/env/oval-dev.local.env`](../../.docker/env/oval-dev.local.env) (`BETTER_AUTH_SECRET`) — mounted into the dev container when present.
 
-Host-only tools (lint, unit tests, `user:role`) still use **pnpm on the host** with root `.env` or rendered env as today.
+Host-only tools (lint, unit tests) still use **pnpm on the host** with root `.env` or rendered env as today.
 
 ## Integration tests
 

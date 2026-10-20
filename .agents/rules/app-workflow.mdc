@@ -45,5 +45,5 @@ Stack: **Next.js App Router**, **Better Auth** (`lib/auth/`), **Drizzle** (`lib/
 
 ## Roles
 
-- Default `user`; promote via `pnpm run user:role -- <email> editor|admin|super_admin` after first email login.
-- Better Auth **admin** plugin: `adminRoles: ["admin"]`; `/admin` allows **editor**, **admin** and **super_admin** (`lib/auth/roles.ts`, продуктовый RBAC). **super_admin** — `/admin/users/merge` (ручная склейка пользователей).
+- Default `user`; **super_admin** назначает **user** / **editor** / **admin** на `/admin/users`. Роль **super_admin** — только прямое обновление `user.role` в БД.
+- Better Auth **admin** plugin: `adminRoles: ["admin"]`; `/admin` allows **editor**, **admin** and **super_admin** (`lib/auth/roles.ts`, продуктовый RBAC). **super_admin** — `/admin/users` (роли), `/admin/users/merge` (склейка).

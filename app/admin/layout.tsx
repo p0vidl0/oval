@@ -31,7 +31,12 @@ export default async function AdminLayout({
           <Link href="/admin/registrations">Участники</Link>
           <Link href="/admin/payments">Оплата</Link>
           <Link href="/admin/analytics">Статистика</Link>
-          {superAdmin ? <Link href="/admin/users/merge">Склейка</Link> : null}
+          {superAdmin ? (
+            <>
+              <Link href="/admin/users">Пользователи</Link>
+              <Link href="/admin/users/merge">Склейка</Link>
+            </>
+          ) : null}
         </nav>
         {children}
       </div>

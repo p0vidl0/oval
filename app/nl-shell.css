@@ -1080,6 +1080,17 @@ html {
   border-top: 1px solid var(--line);
 }
 
+.nl-admin-user-role {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nl-admin-user-role__select {
+  min-width: 10rem;
+}
+
 /* ── Админка: тренировка как основная сущность ───────────────────────── */
 
 .nl-admin-head {
