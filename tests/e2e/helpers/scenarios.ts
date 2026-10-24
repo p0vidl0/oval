@@ -86,6 +86,7 @@ async function seedRegistrationWithPendingPayment(
 
 export type E2eSeedScenario =
   | "admin-attendance"
+  | "admin-window-soon"
   | "admin-today"
   | "email-merge-victim"
   | "admin-payment-conflict"
@@ -98,6 +99,14 @@ export type AttendanceParticipant = {
 };
 
 export type E2eSeedResult =
+  | {
+      scenario: "admin-window-soon";
+      superAdminEmail: string;
+      sessionId: string;
+      participantName: string;
+      /** Когда откроется окно отметки (ISO). */
+      opensAt: string;
+    }
   | {
       scenario: "admin-attendance";
       superAdminEmail: string;
@@ -140,6 +149,49 @@ export async function seedE2eScenario(
   }
 
   const suffix = runId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
+
+  if (scenario === "admin-window-soon") {
+    const superAdminEmail = `e2e-soon-super-${suffix}@oval.test`;
+    await insertUser({
+      id: `e2e-soon-super-${suffix}`,
+      name: "E2E Soon Super",
+      email: superAdminEmail,
+      role: "super_admin",
+    });
+    const participantId = `e2e-soon-p-${suffix}`;
+    const participantName = `Soon Runner ${suffix}`;
+    await insertUser({
+      id: participantId,
+      name: participantName,
+      email: `e2e-soon-p-${suffix}@oval.test`,
+    });
+    // Без сбора окно открывается за час до старта: через 25 секунд.
+    const opensAt = new Date(Date.now() + 25_000);
+    const sessionId = `e2e-soon-sess-${suffix}`;
+    await db.insert(trainingSessions).values({
+      id: sessionId,
+      title: `E2E Soon ${suffix}`,
+      startsAt: new Date(opensAt.getTime() + 3600_000),
+      priceCents: 0,
+      capacity: 20,
+      status: "scheduled",
+      onlinePaymentEnabled: false,
+    });
+    await db.insert(registrations).values({
+      id: crypto.randomUUID(),
+      userId: participantId,
+      trainingSessionId: sessionId,
+      status: "active",
+      paymentState: "free",
+    });
+    return {
+      scenario,
+      superAdminEmail,
+      sessionId,
+      participantName,
+      opensAt: opensAt.toISOString(),
+    };
+  }
 
   if (scenario === "admin-attendance") {
     const superAdminEmail = `e2e-att-super-${suffix}@oval.test`;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ATTENDANCE_GRACE_DAYS,
+  attendanceMoments,
   attendanceWindow,
   canMarkAttendance,
 } from "@/lib/domain/attendance/rules";
@@ -93,5 +94,17 @@ describe("canMarkAttendance", () => {
         now: at(0),
       }),
     ).toEqual({ ok: false, reason: "session_cancelled" });
+  });
+});
+
+describe("attendanceMoments", () => {
+  it("open, start, end and close of the window, in order", () => {
+    const gatherAt = new Date(startsAt.getTime() - 30 * 60_000);
+    expect(attendanceMoments(session({ gatherAt }))).toEqual([
+      gatherAt,
+      startsAt,
+      new Date(startsAt.getTime() + 2 * H),
+      new Date(startsAt.getTime() + 2 * H + ATTENDANCE_GRACE_DAYS * D),
+    ]);
   });
 });

@@ -5,6 +5,7 @@ import {
   TrainingStatusBadge,
 } from "@/components/admin/admin-badges";
 import { AdminMenu } from "@/components/admin/admin-menu";
+import { RefreshAt } from "@/components/admin/refresh-at";
 import {
   CancelSessionDialog,
   RescheduleDialog,
@@ -22,6 +23,7 @@ import {
 import { defaultTrainingCancellationBody } from "@/lib/admin/training-session-copy";
 import { can } from "@/lib/auth/capabilities";
 import { getServerSession } from "@/lib/auth/session";
+import { attendanceMoments } from "@/lib/domain/attendance/rules";
 import { isPostLive } from "@/lib/feed/publication";
 import {
   formatDateInput,
@@ -198,6 +200,11 @@ export default async function AdminSessionPage({
       ) : null}
 
       <SessionLiveRefresh sessionId={session.id} />
+      {/* Кнопки «Был / Не был», «Остальные не пришли» появляются и исчезают сами. */}
+      <RefreshAt
+        moments={attendanceMoments(session).map((m) => m.toISOString())}
+        serverNow={now.toISOString()}
+      />
       <nav className="nl-admin-tabs" aria-label="Разделы тренировки">
         {TABS.map((t) => (
           <Link

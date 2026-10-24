@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TrainingStatusBadge } from "@/components/admin/admin-badges";
+import { RefreshAt } from "@/components/admin/refresh-at";
 import { NlDateStack } from "@/components/nl/date-stack";
 import {
   ListRow,
@@ -8,7 +9,11 @@ import {
   PageHeader,
   Section,
 } from "@/components/nl/ui";
-import { attendanceWindow, sessionEnd } from "@/lib/domain/attendance/rules";
+import {
+  attendanceMoments,
+  attendanceWindow,
+  sessionEnd,
+} from "@/lib/domain/attendance/rules";
 import {
   formatPriceRub,
   formatShortListDate,
@@ -86,9 +91,15 @@ export default async function AdminTodayPage() {
     listPaidOnCancelled({ page: 1, size: 1 }),
   ]);
   const [current, ...next] = sessions;
+  // Счётчик «отмечено», «идёт сейчас» и смена текущей тренировки — без перезагрузки.
+  const refreshMoments = current ? attendanceMoments(current.session) : [];
 
   return (
     <main>
+      <RefreshAt
+        moments={refreshMoments.map((m) => m.toISOString())}
+        serverNow={now.toISOString()}
+      />
       <PageHeader
         title="Сегодня"
         actions={

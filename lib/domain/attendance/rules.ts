@@ -46,6 +46,16 @@ export function attendanceWindow(session: WindowSession): {
   };
 }
 
+/**
+ * Когда меняется набор действий тренера: открытие окна (кнопки «Был / Не
+ * был»), старт («Остальные не пришли»), конец (тренировка уходит с «Сегодня»),
+ * закрытие окна.
+ */
+export function attendanceMoments(session: WindowSession): Date[] {
+  const { opensAt, closesAt } = attendanceWindow(session);
+  return [opensAt, session.startsAt, sessionEnd(session), closesAt];
+}
+
 export type AttendanceGate =
   | { ok: true }
   | {

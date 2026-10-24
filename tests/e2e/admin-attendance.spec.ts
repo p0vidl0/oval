@@ -158,4 +158,35 @@ test.describe("admin: посещаемость", () => {
     await page.goto("/admin");
     await expect(page).not.toHaveURL(/\/admin/);
   });
+
+  test("attendance buttons appear when the window opens, without reload", async ({
+    page,
+  }) => {
+    const result = await seedE2eScenario(
+      "admin-window-soon",
+      `w-${Date.now()}`,
+    );
+    if (result.scenario !== "admin-window-soon")
+      throw new Error("unexpected seed");
+    await loginWithEmailOtp(page, result.superAdminEmail, "/admin");
+    await page.goto(`/admin/sessions/${result.sessionId}`);
+    const r = row(page, result.participantName);
+    await expect(r).toBeVisible();
+    const opensAt = Date.parse(result.opensAt);
+    if (Date.now() < opensAt - 2000) {
+      await expect(button(r, "Был")).toHaveCount(0);
+    }
+    // Без перезагрузки: маркер в window переживает только мягкий refresh.
+    await page.evaluate(() => {
+      (window as unknown as { __noReload?: boolean }).__noReload = true;
+    });
+    await expect(button(r, "Был")).toBeVisible({
+      timeout: Math.max(5_000, opensAt - Date.now() + 15_000),
+    });
+    expect(
+      await page.evaluate(
+        () => (window as unknown as { __noReload?: boolean }).__noReload,
+      ),
+    ).toBe(true);
+  });
 });
