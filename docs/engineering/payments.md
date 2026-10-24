@@ -2,9 +2,10 @@
 
 ## Модель
 
-- `payments` — один платёж на запись (`registration_id` unique)
+- `payments` — один платёж на запись (`registration_id` unique); повторная запись — новая строка со своим платежом
+- `payments.method` — `online` (провайдер, mock), `cash` / `bank_transfer` (кнопка «Оплачено» в админке → «Наличными» / «Переводом»), `moved` (зарезервировано для переноса); старые «оплачено на месте» помечены `cash`
 - `payment_webhook_deliveries` — идемпотентность webhook (`id` = `{provider}:{event_id}`)
-- Статусы: registration `pending_payment` → `paid` при `payment.status = succeeded`
+- Запись: `status = active`, `payment_state` `due` → `paid` при `payment.status = succeeded` (бесплатная запись сразу `free`)
 
 ## Провайдер
 
@@ -14,7 +15,7 @@
 
 Пользователь: `/cabinet/pay/[registrationId]` — инструкция, без self-serve «оплачено».
 
-Admin: раздел «Оплата» `/admin/payments` (или карточка тренировки → «Участники») → **Оплачено**. Возврат и перенос оплаты — там же (статусы записи `refunded` / `transferred`).
+Admin: раздел «Оплата» `/admin/payments` (или карточка тренировки → «Участники») → **Оплачено**. Возврат и перенос оплаты — там же (запись закрывается: `payment_state` `refunded` / `moved`).
 
 ## Webhook
 

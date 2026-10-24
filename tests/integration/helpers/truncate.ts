@@ -8,6 +8,7 @@ export async function truncateAppTables() {
       analytics_events,
       payment_webhook_deliveries,
       training_session_events,
+      registration_events,
       payments,
       post_images,
       registrations,

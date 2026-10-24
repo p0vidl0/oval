@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AdminNav } from "@/components/admin/admin-nav";
 import { NlShell } from "@/components/nl/shell";
-import { canAccessAdmin, isSuperAdmin } from "@/lib/auth/roles";
+import { ADMIN_HOME, buildAdminMenu } from "@/lib/admin/routes";
+import { can } from "@/lib/auth/capabilities";
 import { getServerSession } from "@/lib/auth/session";
 
 export const metadata: Metadata = {
@@ -15,29 +16,18 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const session = await getServerSession();
-  if (!session) redirect("/login?next=/admin/sessions");
-  if (!canAccessAdmin(session.user.role as string | undefined)) {
+  if (!session) redirect(`/login?next=${ADMIN_HOME}`);
+  const role = session.user.role as string | undefined;
+  if (!can(role, "admin.access")) {
     redirect("/");
   }
 
-  const superAdmin = isSuperAdmin(session.user.role as string | undefined);
+  const groups = buildAdminMenu(role);
 
   return (
     <NlShell tab="admin">
       <div className="nl-page">
-        <nav className="nl-admin-nav" aria-label="Админка">
-          <Link href="/admin/sessions">Тренировки</Link>
-          <Link href="/admin/posts">Публикации</Link>
-          <Link href="/admin/registrations">Участники</Link>
-          <Link href="/admin/payments">Оплата</Link>
-          <Link href="/admin/analytics">Статистика</Link>
-          {superAdmin ? (
-            <>
-              <Link href="/admin/users">Пользователи</Link>
-              <Link href="/admin/users/merge">Склейка</Link>
-            </>
-          ) : null}
-        </nav>
+        <AdminNav groups={groups} />
         {children}
       </div>
     </NlShell>

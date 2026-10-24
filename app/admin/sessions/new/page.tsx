@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { AdminBanner } from "@/components/admin/admin-badges";
 import { PublicationEditor } from "@/components/admin/publication-editor";
+import { BackLink } from "@/components/nl/ui";
 import { createTrainingAction } from "@/lib/admin/session-actions";
 import { isTelegramChannelPublishConfigured } from "@/lib/bots/telegram/channel-config";
 
@@ -10,13 +10,7 @@ export default async function NewTrainingPage({ searchParams }: Props) {
   const { error } = await searchParams;
   return (
     <main>
-      <Link
-        href="/admin/sessions"
-        className="caption"
-        style={{ color: "var(--ink-muted)" }}
-      >
-        ← Тренировки
-      </Link>
+      <BackLink href="/admin/sessions">Расписание</BackLink>
       <h1
         className="nl-page-title nl-page-title--admin"
         style={{ marginTop: "var(--space-4)" }}

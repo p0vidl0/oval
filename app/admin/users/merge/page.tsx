@@ -1,12 +1,16 @@
 import { redirect } from "next/navigation";
 import { UserMergeForm } from "@/components/admin/user-merge-form";
-import { isSuperAdmin } from "@/lib/auth/roles";
+import { ADMIN_HOME } from "@/lib/admin/routes";
+import { can } from "@/lib/auth/capabilities";
 import { getServerSession } from "@/lib/auth/session";
 
 export default async function AdminUserMergePage() {
   const session = await getServerSession();
-  if (!session || !isSuperAdmin(session.user.role as string | undefined)) {
-    redirect("/admin/sessions");
+  if (
+    !session ||
+    !can(session.user.role as string | undefined, "users.merge")
+  ) {
+    redirect(ADMIN_HOME);
   }
 
   return (

@@ -6,6 +6,8 @@ test("login, register, webhook pay, cabinet", async ({ page, request }) => {
   const email = `e2e-${Date.now()}@oval.test`;
 
   await loginWithEmailOtp(page, email, "/feed");
+  // Участнику ссылка в админку не показывается.
+  await expect(page.getByRole("link", { name: "Управлять →" })).toHaveCount(0);
 
   // Новый пользователь без имени: перед первой записью спрашиваем имя.
   await page.getByRole("button", { name: "Записаться" }).first().click();

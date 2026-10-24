@@ -20,7 +20,7 @@ pnpm run task -- dev-down # остановить app + Postgres
 
 Вход: http://localhost:3000/login — OTP в логе dev-сервера (`[email stub] …`).
 
-Роли editor и admin назначает супер-админ в админке: `/admin/users`.
+Роль admin назначает супер-админ в админке: `/admin/users`.
 
 ## Тесты
 

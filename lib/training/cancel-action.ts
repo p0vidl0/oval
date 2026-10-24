@@ -1,10 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { canAccessAdmin } from "@/lib/auth/roles";
+import { applyRegistrationEffects } from "@/lib/app/effects";
 import { getServerSession } from "@/lib/auth/session";
-import { publishSessionRegistrationsChanged } from "@/lib/realtime/publish-session-registrations-changed";
 import { safeInternalPath } from "@/lib/site/safe-internal-path";
 import { cancelUserRegistration } from "@/lib/training/registrations";
 
@@ -17,20 +15,18 @@ export async function cancelRegistrationForm(formData: FormData) {
   const returnTo = safeInternalPath(
     String(formData.get("return_to") ?? "/cabinet"),
   );
-  const isAdmin = canAccessAdmin(session.user.role as string | undefined);
+  // Форма стоит на страницах участника: роль не снимает его правила.
   const result = await cancelUserRegistration(
     registrationId,
     session.user.id,
-    isAdmin,
+    "participant",
   );
   if (!result.ok) {
     const failed = new URL(returnTo, "https://internal.invalid");
     failed.searchParams.set("error", result.error);
     redirect(`${failed.pathname}${failed.search}`);
   }
-  await publishSessionRegistrationsChanged(result.sessionId);
-  revalidatePath("/cabinet");
-  revalidatePath("/feed");
+  await applyRegistrationEffects([result.sessionId]);
   redirect(returnTo);
 }
 
@@ -48,11 +44,9 @@ export async function cancelRegistrationClient(
   const result = await cancelUserRegistration(
     registrationId,
     session.user.id,
-    false,
+    "participant",
   );
   if (!result.ok) return result;
-  await publishSessionRegistrationsChanged(result.sessionId);
-  revalidatePath("/cabinet");
-  revalidatePath("/feed");
+  await applyRegistrationEffects([result.sessionId]);
   return { ok: true, sessionId: result.sessionId };
 }

@@ -99,6 +99,41 @@
       "when": 1792071292616,
       "tag": "0013_curious_sugar_man",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792833249019,
+      "tag": "0014_registration_payment_axis",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792833917881,
+      "tag": "0015_registration_active_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792833958192,
+      "tag": "0016_registration_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792837151584,
+      "tag": "0017_registration_attendance",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792839083554,
+      "tag": "0018_payment_method",
+      "breakpoints": true
     }
   ]
 }

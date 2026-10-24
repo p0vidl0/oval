@@ -11,18 +11,11 @@ const run = process.env.OVAL_INTEGRATION === "1" ? describe : describe.skip;
 run("setUserRole", () => {
   useIntegrationDb();
 
-  it("sets user, editor, and admin", async () => {
+  it("sets user and admin", async () => {
     const id = await insertUser({ id: "role-target", role: "user" });
 
-    await setUserRole({ userId: id, role: "editor" });
-    let [row] = await db
-      .select({ role: user.role })
-      .from(user)
-      .where(eq(user.id, id));
-    expect(row?.role).toBe("editor");
-
     await setUserRole({ userId: id, role: "admin" });
-    [row] = await db
+    let [row] = await db
       .select({ role: user.role })
       .from(user)
       .where(eq(user.id, id));
@@ -37,13 +30,13 @@ run("setUserRole", () => {
   });
 
   it("no-op when role unchanged", async () => {
-    const id = await insertUser({ id: "role-same", role: "editor" });
-    await setUserRole({ userId: id, role: "editor" });
+    const id = await insertUser({ id: "role-same", role: "admin" });
+    await setUserRole({ userId: id, role: "admin" });
     const [row] = await db
       .select({ role: user.role })
       .from(user)
       .where(eq(user.id, id));
-    expect(row?.role).toBe("editor");
+    expect(row?.role).toBe("admin");
   });
 
   it("rejects super_admin target", async () => {

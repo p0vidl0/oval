@@ -4,6 +4,7 @@ import { ClickableRow } from "@/components/admin/clickable-row";
 import { Pagination } from "@/components/admin/pagination";
 import { AdminRegistrationRowActions } from "@/components/admin/registration-row-actions";
 import { NlStatus } from "@/components/nl/status";
+import { BackLink } from "@/components/nl/ui";
 import { parsePageRequest } from "@/lib/admin/pagination";
 import {
   adminMarkPaidForm,
@@ -11,21 +12,20 @@ import {
   adminRemoveRegistrationForm,
   adminTransferPaymentForm,
 } from "@/lib/admin/registration-actions";
+import { describeRegistration } from "@/lib/domain/registration/describe";
 import {
   formatPriceRub,
   formatShortListDate,
   formatTimeHm,
 } from "@/lib/format/datetime";
+import { paymentMethodSuffix } from "@/lib/payments/status";
 import {
   getParticipant,
+  getParticipantAttendance,
   listParticipantRegistrations,
   listParticipants,
   listTransferTargets,
 } from "@/lib/training/admin-queries";
-import {
-  adminRegistrationStatusLabel,
-  isActiveRegistrationStatus,
-} from "@/lib/training/status";
 
 type SearchParams = {
   session?: string;
@@ -97,9 +97,7 @@ export default async function AdminParticipantsPage({ searchParams }: Props) {
                     <td>
                       <Link href={`${BASE_PATH}?user=${u.id}`}>
                         {u.name?.trim() || (
-                          <span style={{ color: "var(--ink-muted)" }}>
-                            без имени
-                          </span>
+                          <span className="nl-muted">без имени</span>
                         )}
                       </Link>
                     </td>
@@ -128,24 +126,19 @@ async function ParticipantHistory({ params }: { params: SearchParams }) {
   const userId = params.user ?? "";
   const participant = await getParticipant(userId);
   if (!participant) notFound();
-  const [history, targets] = await Promise.all([
+  const [history, targets, attendance] = await Promise.all([
     listParticipantRegistrations(
       userId,
       parsePageRequest(params.page, params.size),
     ),
     listTransferTargets(),
+    getParticipantAttendance(userId),
   ]);
   const rows = history.items;
 
   return (
     <main>
-      <Link
-        href="/admin/registrations"
-        className="caption"
-        style={{ color: "var(--ink-muted)" }}
-      >
-        ← Участники
-      </Link>
+      <BackLink href="/admin/registrations">Участники</BackLink>
       <h1
         className="nl-display nl-admin-title-sm"
         style={{ marginTop: "var(--space-4)" }}
@@ -158,6 +151,24 @@ async function ParticipantHistory({ params }: { params: SearchParams }) {
       >
         {participant.email}
       </p>
+      <p className="caption">
+        {attendance.percent === null
+          ? "Посещаемость: отметок пока нет"
+          : `Посещаемость ${attendance.percent}% (${attendance.attended} из ${attendance.marked} отмеченных)`}
+      </p>
+      {attendance.lastNoShows.length > 0 ? (
+        <p className="caption nl-muted">
+          Последние прогулы:{" "}
+          {attendance.lastNoShows.map((s, i) => (
+            <span key={s.registrationId}>
+              {i > 0 ? ", " : ""}
+              <Link href={`/admin/sessions/${s.sessionId}`}>
+                {formatShortListDate(s.startsAt)} {s.title}
+              </Link>
+            </span>
+          ))}
+        </p>
+      ) : null}
 
       <div className="nl-table-wrap" style={{ marginTop: "var(--space-6)" }}>
         <table className="nl-table nl-table--valign-middle">
@@ -174,59 +185,59 @@ async function ParticipantHistory({ params }: { params: SearchParams }) {
                 <td colSpan={3}>Записей нет</td>
               </tr>
             ) : (
-              rows.map(({ registration, session, payment }) => (
-                <tr key={registration.id}>
-                  <td>
-                    <Link href={`/admin/sessions/${session.id}`}>
-                      {sessionLabel(session)}
-                    </Link>
-                    {session.status === "cancelled" ? (
-                      <span style={{ color: "var(--cancel)" }}>
-                        {" "}
-                        · отменена
-                      </span>
-                    ) : null}
-                  </td>
-                  <td>
-                    <NlStatus
-                      variant={
-                        registration.status === "pending_payment"
-                          ? "due"
-                          : isActiveRegistrationStatus(registration.status)
-                            ? "default"
-                            : "cancelled"
-                      }
-                    >
-                      {adminRegistrationStatusLabel({
-                        status: registration.status,
-                        cancelledBy: registration.cancelledBy,
-                        priceCents: session.priceCents,
-                      })}
-                      {registration.status === "paid" && payment
-                        ? ` · ${formatPriceRub(payment.amountCents, payment.currency)}`
-                        : ""}
-                    </NlStatus>
-                  </td>
-                  <td>
-                    <AdminRegistrationRowActions
-                      registrationId={registration.id}
-                      status={registration.status}
-                      priceCents={session.priceCents}
-                      currentSessionId={session.id}
-                      transferTargets={targets
-                        .filter((t) => t.id !== session.id)
-                        .map((t) => ({
-                          sessionId: t.id,
-                          label: sessionLabel(t),
-                        }))}
-                      markPaidAction={adminMarkPaidForm}
-                      refundAction={adminMarkRefundedForm}
-                      transferAction={adminTransferPaymentForm}
-                      removeAction={adminRemoveRegistrationForm}
-                    />
-                  </td>
-                </tr>
-              ))
+              rows.map(({ registration, session, payment }) => {
+                const view = describeRegistration({
+                  registration,
+                  session,
+                  viewer: "staff",
+                  now: new Date(),
+                });
+                return (
+                  <tr key={registration.id}>
+                    <td>
+                      <Link href={`/admin/sessions/${session.id}`}>
+                        {sessionLabel(session)}
+                      </Link>
+                      {session.status === "cancelled" ? (
+                        <span className="nl-error-text"> · отменена</span>
+                      ) : null}
+                    </td>
+                    <td>
+                      <NlStatus variant={view.variant}>
+                        {view.label}
+                        {view.active &&
+                        registration.paymentState === "paid" &&
+                        payment
+                          ? ` · ${formatPriceRub(payment.amountCents, payment.currency)}${paymentMethodSuffix(payment.method)}`
+                          : ""}
+                      </NlStatus>
+                    </td>
+                    <td>
+                      <AdminRegistrationRowActions
+                        registrationId={registration.id}
+                        participantName={
+                          participant.name?.trim() ||
+                          participant.email ||
+                          undefined
+                        }
+                        actions={view.actions}
+                        priceCents={session.priceCents}
+                        currentSessionId={session.id}
+                        transferTargets={targets
+                          .filter((t) => t.id !== session.id)
+                          .map((t) => ({
+                            sessionId: t.id,
+                            label: sessionLabel(t),
+                          }))}
+                        markPaidAction={adminMarkPaidForm}
+                        refundAction={adminMarkRefundedForm}
+                        transferAction={adminTransferPaymentForm}
+                        removeAction={adminRemoveRegistrationForm}
+                      />
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

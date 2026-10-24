@@ -20,7 +20,7 @@ const run = process.env.OVAL_INTEGRATION === "1" ? describe : describe.skip;
 run("admin pagination", () => {
   useIntegrationDb();
 
-  it("sessions: 10 per page, newest first, page past end → last", async () => {
+  it("sessions: 10 per page, upcoming from the nearest, page past end → last", async () => {
     const base = Date.now() + 86_400_000;
     for (let i = 0; i < 12; i++) {
       await seedPublishedAnnouncement({
@@ -32,11 +32,11 @@ run("admin pagination", () => {
     expect(first.total).toBe(12);
     expect(first.pageCount).toBe(2);
     expect(first.items).toHaveLength(10);
-    expect(first.items[0]?.session.title).toBe("S11");
+    expect(first.items[0]?.session.title).toBe("S0");
 
     const last = await listAdminSessions("upcoming", { page: 99, size: 10 });
     expect(last.page).toBe(2);
-    expect(last.items.map((r) => r.session.title)).toEqual(["S1", "S0"]);
+    expect(last.items.map((r) => r.session.title)).toEqual(["S10", "S11"]);
   });
 
   it("posts: filter and pagination together", async () => {
@@ -109,7 +109,7 @@ run("admin pagination", () => {
     });
     await seedRegistration(userId, past);
     await seedRegistration(userId, future);
-    await seedRegistration(userId, free);
+    await seedRegistration(userId, free, "free");
     const unpaid = await listUnpaid({ page: 1, size: 10 });
     expect(unpaid.items.map((r) => r.session.title)).toEqual([
       "Future",

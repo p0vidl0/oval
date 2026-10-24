@@ -8,6 +8,7 @@ import { CancelRegistrationForm } from "@/components/nl/cancel-registration-form
 import { NlDateStack } from "@/components/nl/date-stack";
 import { NlShell } from "@/components/nl/shell";
 import { NlStatus } from "@/components/nl/status";
+import { Muted } from "@/components/nl/ui";
 import {
   listAvailableProvidersToLink,
   listLinkedAuthMethods,
@@ -16,9 +17,10 @@ import { getServerSession } from "@/lib/auth/session";
 import { isTelegramBotLoginConfigured } from "@/lib/auth/telegram/config";
 import { isTelegramOidcConfigured } from "@/lib/auth/telegram/oidc-config";
 import { isVkConfigured } from "@/lib/auth/vk/config";
-import { historyStatus } from "@/lib/cabinet/history-status";
 import { db } from "@/lib/db/client";
 import { user } from "@/lib/db/schema/auth-schema";
+import { describeRegistration } from "@/lib/domain/registration/describe";
+import { PAID_CANCEL_MESSAGE } from "@/lib/domain/registration/types";
 import { getPreviousStartByRescheduledSessions } from "@/lib/feed/queries";
 import {
   formatPriceRub,
@@ -29,15 +31,23 @@ import {
 import { listUserPayments } from "@/lib/payments/queries";
 import { paymentStatusLabel } from "@/lib/payments/status";
 import {
+  countUserAttendance,
   getTransferTargetsBySourceRegistrationIds,
   listUserRegistrationHistory,
   listUserRegistrations,
 } from "@/lib/training/registrations";
-import {
-  canUserCancelRegistration,
-  isClosedRegistrationStatus,
-  PAID_CANCEL_MESSAGE,
-} from "@/lib/training/status";
+
+function trainingsCountLabel(n: number) {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  const word =
+    mod10 === 1 && mod100 !== 11
+      ? "тренировка"
+      : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+        ? "тренировки"
+        : "тренировок";
+  return `${n} ${word}`;
+}
 
 type Props = {
   searchParams: Promise<{
@@ -98,6 +108,8 @@ export default async function CabinetPage({ searchParams }: Props) {
 
   const registrations = await listUserRegistrations(session.user.id);
   const history = await listUserRegistrationHistory(session.user.id);
+  const year = new Date().getFullYear();
+  const attendedThisYear = await countUserAttendance(session.user.id, year);
   const payments = await listUserPayments(session.user.id);
   const now = new Date();
 
@@ -108,10 +120,12 @@ export default async function CabinetPage({ searchParams }: Props) {
     (r) =>
       r.session.startsAt < now ||
       r.session.status !== "scheduled" ||
-      isClosedRegistrationStatus(r.registration.status),
+      r.registration.status !== "active",
   );
   past.sort(
-    (a, b) => b.session.startsAt.getTime() - a.session.startsAt.getTime(),
+    (a, b) =>
+      b.session.startsAt.getTime() - a.session.startsAt.getTime() ||
+      b.registration.createdAt.getTime() - a.registration.createdAt.getTime(),
   );
   const historyVisible = showAllHistory ? past : past.slice(0, 5);
 
@@ -120,7 +134,7 @@ export default async function CabinetPage({ searchParams }: Props) {
     await getPreviousStartByRescheduledSessions(sessionIds);
 
   const transferredIds = past
-    .filter(({ registration }) => registration.status === "transferred")
+    .filter(({ registration }) => registration.paymentState === "moved")
     .map(({ registration }) => registration.id);
   const transferTargetByRegId =
     await getTransferTargetsBySourceRegistrationIds(transferredIds);
@@ -160,12 +174,16 @@ export default async function CabinetPage({ searchParams }: Props) {
                       session: training,
                       announcementPostId,
                     }) => {
-                      const paid = registration.status === "paid";
-                      const pending = registration.status === "pending_payment";
-                      const showPay =
-                        pending &&
-                        training.priceCents > 0 &&
-                        training.onlinePaymentEnabled;
+                      const view = describeRegistration({
+                        registration,
+                        session: training,
+                        viewer: "participant",
+                        now,
+                      });
+                      const paid = registration.paymentState === "paid";
+                      const free = registration.paymentState === "free";
+                      const due = registration.paymentState === "due";
+                      const showPay = view.actions.payOnline;
                       const price = formatPriceRub(
                         training.priceCents,
                         training.currency,
@@ -206,11 +224,11 @@ export default async function CabinetPage({ searchParams }: Props) {
                                   </span>
                                 ) : null}
                               </div>
-                              {paid && training.priceCents > 0 ? (
+                              {paid ? (
                                 <NlStatus paid>Оплачено · {price}</NlStatus>
-                              ) : paid ? (
+                              ) : free ? (
                                 <NlStatus>Вы записаны</NlStatus>
-                              ) : pending && training.priceCents > 0 ? (
+                              ) : due ? (
                                 <NlStatus variant="due">
                                   Ждёт оплаты · {price}
                                 </NlStatus>
@@ -225,10 +243,7 @@ export default async function CabinetPage({ searchParams }: Props) {
                                   Оплатить {price}
                                 </Link>
                               ) : null}
-                              {canUserCancelRegistration(
-                                registration,
-                                training,
-                              ) ? (
+                              {view.actions.cancel ? (
                                 <CancelRegistrationForm
                                   registrationId={registration.id}
                                   returnTo="/cabinet"
@@ -241,11 +256,11 @@ export default async function CabinetPage({ searchParams }: Props) {
                                     Отменить
                                   </span>
                                 </CancelRegistrationForm>
-                              ) : (
+                              ) : paid ? (
                                 <p className="caption nl-cabinet-booking__hint">
                                   {PAID_CANCEL_MESSAGE}
                                 </p>
-                              )}
+                              ) : null}
                             </div>
                           </div>
                         </li>
@@ -258,6 +273,11 @@ export default async function CabinetPage({ searchParams }: Props) {
 
             <section id="history" className="nl-cabinet-section">
               <h2 className="nl-display nl-cabinet-section__title">История</h2>
+              {attendedThisYear > 0 ? (
+                <Muted as="p" className="caption">
+                  {trainingsCountLabel(attendedThisYear)} в {year}
+                </Muted>
+              ) : null}
               {past.length === 0 ? (
                 <p className="nl-cabinet-empty">—</p>
               ) : (
@@ -273,23 +293,22 @@ export default async function CabinetPage({ searchParams }: Props) {
                           training.priceCents,
                           training.currency,
                         );
-                        const status = historyStatus({
+                        const status = describeRegistration({
                           registration,
+                          session: training,
+                          viewer: "participant",
+                          now,
                           transferTargetDate: transferTargetByRegId.get(
                             registration.id,
                           ),
                         });
-                        const cancelled = isClosedRegistrationStatus(
-                          registration.status,
-                        );
+                        const cancelled = !status.active;
                         const priceSuffix =
-                          registration.status === "paid" &&
-                          training.priceCents > 0
+                          status.active &&
+                          (registration.paymentState === "paid" ||
+                            registration.paymentState === "due")
                             ? ` · ${price}`
-                            : registration.status === "pending_payment" &&
-                                training.priceCents > 0
-                              ? ` · ${price}`
-                              : "";
+                            : "";
 
                         return (
                           <li
@@ -314,7 +333,7 @@ export default async function CabinetPage({ searchParams }: Props) {
                               )}
                             </div>
                             <NlStatus variant={status.variant}>
-                              {status.text}
+                              {status.label}
                               {priceSuffix}
                             </NlStatus>
                           </li>

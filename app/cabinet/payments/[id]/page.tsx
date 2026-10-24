@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { NlShell } from "@/components/nl/shell";
 import { NlStatus } from "@/components/nl/status";
+import { BackLink } from "@/components/nl/ui";
 import { getServerSession } from "@/lib/auth/session";
 import { formatDateTimeRu, formatPriceRub } from "@/lib/format/datetime";
 import { getPaymentForUser } from "@/lib/payments/queries";
@@ -22,13 +22,7 @@ export default async function PaymentReceiptPage({ params }: Props) {
   return (
     <NlShell tab="cabinet">
       <main className="nl-page" style={{ maxWidth: 520 }}>
-        <Link
-          href="/cabinet"
-          className="caption"
-          style={{ color: "var(--ink-muted)" }}
-        >
-          ← Кабинет
-        </Link>
+        <BackLink href="/cabinet">Кабинет</BackLink>
         <h1
           className="nl-display"
           style={{ marginTop: "var(--space-4)", fontSize: 36 }}

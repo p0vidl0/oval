@@ -8,10 +8,12 @@ import {
   ilike,
   inArray,
   lt,
+  notInArray,
   or,
   type SQL,
   sql,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import {
   DEFAULT_PAGE_SIZE,
   type Paged,
@@ -24,16 +26,13 @@ import { countRows } from "@/lib/db/count-rows";
 import {
   feedPosts,
   payments,
+  registrationEvents,
   registrations,
   trainingSessionEvents,
   trainingSessions,
 } from "@/lib/db/schema";
 import { user } from "@/lib/db/schema/auth-schema";
-import {
-  ACTIVE_REGISTRATION_STATUSES,
-  CLOSED_REGISTRATION_STATUSES,
-  type RegistrationStatus,
-} from "@/lib/training/status";
+import { ATTENDANCE_GRACE_DAYS } from "@/lib/domain/attendance/rules";
 
 export type AdminSessionScope = "upcoming" | "past" | "cancelled";
 
@@ -44,23 +43,41 @@ export const ADMIN_SESSION_SCOPES: { key: AdminSessionScope; label: string }[] =
     { key: "cancelled", label: "Отменённые" },
   ];
 
-export type ParticipantsFilter = "active" | "unpaid" | "paid" | "closed";
+export type ParticipantsFilter =
+  | "active"
+  | "unmarked"
+  | "unpaid"
+  | "paid"
+  | "closed";
 
 export const PARTICIPANTS_FILTERS: {
   key: ParticipantsFilter;
   label: string;
 }[] = [
   { key: "active", label: "Записаны" },
+  { key: "unmarked", label: "Не отмечены" },
   { key: "unpaid", label: "Ждут оплаты" },
   { key: "paid", label: "Оплатили" },
   { key: "closed", label: "Сняты" },
 ];
 
-const FILTER_STATUSES: Record<ParticipantsFilter, RegistrationStatus[]> = {
-  active: [...ACTIVE_REGISTRATION_STATUSES],
-  unpaid: ["pending_payment"],
-  paid: ["paid"],
-  closed: [...CLOSED_REGISTRATION_STATUSES],
+/** «Оплатили» включает бесплатные записи: по ним нечего ждать. */
+const FILTER_CONDITIONS: Record<ParticipantsFilter, SQL | undefined> = {
+  active: eq(registrations.status, "active"),
+  unmarked: and(
+    eq(registrations.status, "active"),
+    eq(registrations.attendance, "unknown"),
+  ),
+  unpaid: and(
+    eq(registrations.status, "active"),
+    eq(registrations.paymentState, "due"),
+    notInArray(registrations.attendance, ["no_show", "excused"]),
+  ),
+  paid: and(
+    eq(registrations.status, "active"),
+    inArray(registrations.paymentState, ["paid", "free"]),
+  ),
+  closed: eq(registrations.status, "cancelled"),
 };
 
 /** Сколько часов до старта считаем «скоро» для неоплаченных записей. */
@@ -72,12 +89,18 @@ const announcementJoin = and(
 );
 
 const sessionAggregates = {
-  taken: sql<number>`count(${registrations.id}) filter (where ${registrations.status} in ('pending_payment', 'paid'))::int`,
-  paid: sql<number>`count(${registrations.id}) filter (where ${registrations.status} = 'paid')::int`,
-  unpaid: sql<number>`count(${registrations.id}) filter (where ${registrations.status} = 'pending_payment')::int`,
-  // Оплаченные записи: сумма платежа, а для перенесённой оплаты (платёж остался
-  // на исходной записи) — цена тренировки.
-  collectedCents: sql<number>`coalesce(sum(coalesce(case when ${payments.status} = 'succeeded' then ${payments.amountCents} end, ${trainingSessions.priceCents})) filter (where ${registrations.status} = 'paid'), 0)::int`,
+  taken: sql<number>`count(${registrations.id}) filter (where ${registrations.status} = 'active')::int`,
+  paid: sql<number>`count(${registrations.id}) filter (where ${registrations.status} = 'active' and ${registrations.paymentState} in ('paid', 'free'))::int`,
+  // Не пришедшие без оплаты — не долг (см. `isAbsent`).
+  unpaid: sql<number>`count(${registrations.id}) filter (where ${registrations.status} = 'active' and ${registrations.paymentState} = 'due' and ${registrations.attendance} not in ('no_show', 'excused'))::int`,
+  /** Отмечены (был / не пришёл / уважительная) и пришли — среди активных. */
+  marked: sql<number>`count(${registrations.id}) filter (where ${registrations.status} = 'active' and ${registrations.attendance} <> 'unknown')::int`,
+  attended: sql<number>`count(${registrations.id}) filter (where ${registrations.status} = 'active' and ${registrations.attendance} = 'attended')::int`,
+  /** Активные записи с реальными деньгами (без бесплатных). */
+  paidMoney: sql<number>`count(${registrations.id}) filter (where ${registrations.status} = 'active' and ${registrations.paymentState} = 'paid')::int`,
+  // Реальные деньги: сумма платежа, а для перенесённой оплаты (платёж остался
+  // на исходной записи) — цена тренировки. Бесплатные записи не считаются.
+  collectedCents: sql<number>`coalesce(sum(coalesce(case when ${payments.status} = 'succeeded' then ${payments.amountCents} end, ${trainingSessions.priceCents})) filter (where ${registrations.status} = 'active' and ${registrations.paymentState} = 'paid'), 0)::int`,
   wasRescheduled: sql<boolean>`exists (select 1 from ${trainingSessionEvents} where ${trainingSessionEvents.sessionId} = ${trainingSessions.id} and ${trainingSessionEvents.kind} = 'rescheduled')`,
 };
 
@@ -127,18 +150,27 @@ export async function listAdminSessions(
     request,
     () => countRows(trainingSessions, where),
     (limit, offset) =>
-      // Как публикации: от новых к старым (самая поздняя дата — сверху).
+      // Предстоящие — от ближайшей; прошедшие и отменённые — от последней.
       baseSessionQuery()
         .where(where)
-        .orderBy(desc(trainingSessions.startsAt), desc(trainingSessions.id))
+        .orderBy(
+          ...(scope === "upcoming"
+            ? [asc(trainingSessions.startsAt), asc(trainingSessions.id)]
+            : [desc(trainingSessions.startsAt), desc(trainingSessions.id)]),
+        )
         .limit(limit)
         .offset(offset),
   );
 }
 
+/** Сколько активных записей ещё не отмечено. */
+export function unmarkedCount(row: AdminSessionRow) {
+  return row.taken - row.marked;
+}
+
 /** Нужна реакция админа: оплаты на отменённой или неоплаченные перед стартом. */
 export function sessionNeedsAttention(row: AdminSessionRow, now: Date) {
-  if (row.session.status === "cancelled") return row.paid > 0;
+  if (row.session.status === "cancelled") return row.paidMoney > 0;
   const msToStart = row.session.startsAt.getTime() - now.getTime();
   return (
     row.unpaid > 0 &&
@@ -146,6 +178,59 @@ export function sessionNeedsAttention(row: AdminSessionRow, now: Date) {
     msToStart > 0 &&
     msToStart < UNPAID_ATTENTION_HOURS * 3600_000
   );
+}
+
+/** Тренировка без `ends_at` считается идущей 2 часа после старта. */
+const sessionEndsAt = sql`coalesce(${trainingSessions.endsAt}, ${trainingSessions.startsAt} + interval '2 hours')`;
+
+/**
+ * Ближайшие незавершённые тренировки, от ближайшей: идущая сейчас остаётся
+ * первой до конца. Первая — карточка экрана «Сегодня», остальные — «Дальше».
+ */
+export async function listCurrentAndNextSessions(now: Date, limit = 4) {
+  return baseSessionQuery()
+    .where(
+      and(
+        eq(trainingSessions.status, "scheduled"),
+        sql`${sessionEndsAt} >= ${now.toISOString()}::timestamptz`,
+      ),
+    )
+    .orderBy(asc(trainingSessions.startsAt), asc(trainingSessions.id))
+    .limit(limit);
+}
+
+/**
+ * Тренировки, где нужна реакция (как `sessionNeedsAttention`): оплаты на
+ * отменённой или неоплаченные записи в ближайшие сутки перед стартом.
+ */
+export async function listAttentionSessions(now: Date, limit = 10) {
+  const soon = new Date(now.getTime() + UNPAID_ATTENTION_HOURS * 3600_000);
+  // Прошедшие в окне отметки (ATTENDANCE_GRACE_DAYS) с неотмеченными.
+  const markFrom = new Date(
+    now.getTime() - ATTENDANCE_GRACE_DAYS * 24 * 3600_000,
+  );
+  const unmarked = sql`${sessionAggregates.taken} - ${sessionAggregates.marked}`;
+  return baseSessionQuery()
+    .where(
+      or(
+        eq(trainingSessions.status, "cancelled"),
+        and(
+          eq(trainingSessions.status, "scheduled"),
+          gte(trainingSessions.startsAt, now),
+          lt(trainingSessions.startsAt, soon),
+        ),
+        and(
+          eq(trainingSessions.status, "scheduled"),
+          sql`${sessionEndsAt} < ${now.toISOString()}::timestamptz`,
+          sql`${sessionEndsAt} >= ${markFrom.toISOString()}::timestamptz`,
+        ),
+      ),
+    )
+    .having(
+      sql`(${trainingSessions.status} = 'cancelled' and ${sessionAggregates.paidMoney} > 0) or (${trainingSessions.status} = 'scheduled' and ${trainingSessions.startsAt} >= ${now.toISOString()}::timestamptz and ${sessionAggregates.unpaid} > 0) or (${trainingSessions.status} = 'scheduled' and ${sessionEndsAt} < ${now.toISOString()}::timestamptz and ${unmarked} > 0)`,
+    )
+    .orderBy(asc(trainingSessions.startsAt))
+    .limit(limit);
 }
 
 export async function getAdminSession(sessionId: string) {
@@ -174,6 +259,26 @@ export async function listSessionEvents(sessionId: string) {
     .orderBy(desc(trainingSessionEvents.createdAt));
 }
 
+/** Журнал записей тренировки: кто записался, снят, оплатил — с именем участника. */
+export async function listSessionRegistrationEvents(sessionId: string) {
+  const actor = alias(user, "actor");
+  return db
+    .select({
+      event: registrationEvents,
+      participant: { id: user.id, name: user.name, email: user.email },
+      actor: { id: actor.id, name: actor.name },
+    })
+    .from(registrationEvents)
+    .innerJoin(
+      registrations,
+      eq(registrations.id, registrationEvents.registrationId),
+    )
+    .innerJoin(user, eq(user.id, registrations.userId))
+    .leftJoin(actor, eq(actor.id, registrationEvents.actorUserId))
+    .where(eq(registrationEvents.sessionId, sessionId))
+    .orderBy(desc(registrationEvents.createdAt));
+}
+
 export async function listSessionRegistrationsAdmin(
   sessionId: string,
   filter: ParticipantsFilter = "active",
@@ -190,7 +295,7 @@ export async function listSessionRegistrationsAdmin(
     .where(
       and(
         eq(registrations.trainingSessionId, sessionId),
-        inArray(registrations.status, FILTER_STATUSES[filter]),
+        FILTER_CONDITIONS[filter],
       ),
     )
     .orderBy(registrations.createdAt);
@@ -248,8 +353,8 @@ async function countAttention(where: SQL | undefined) {
 export async function listPaidOnCancelled(request: PageRequest) {
   const where = and(
     eq(trainingSessions.status, "cancelled"),
-    eq(registrations.status, "paid"),
-    sql`${trainingSessions.priceCents} > 0`,
+    eq(registrations.status, "active"),
+    eq(registrations.paymentState, "paid"),
   );
   return paginate(
     request,
@@ -270,8 +375,9 @@ export async function listPaidOnCancelled(request: PageRequest) {
 export async function listUnpaid(request: PageRequest) {
   const where = and(
     eq(trainingSessions.status, "scheduled"),
-    eq(registrations.status, "pending_payment"),
-    sql`${trainingSessions.priceCents} > 0`,
+    eq(registrations.status, "active"),
+    eq(registrations.paymentState, "due"),
+    notInArray(registrations.attendance, ["no_show", "excused"]),
   );
   return paginate(
     request,
@@ -348,4 +454,51 @@ export async function listParticipantRegistrations(
         .limit(limit)
         .offset(offset),
   );
+}
+
+/**
+ * Посещаемость участника по отмеченным записям: процент = пришёл / (пришёл +
+ * не пришёл), уважительные не считаются. Плюс последние прогулы.
+ */
+export async function getParticipantAttendance(userId: string) {
+  const [counts] = await db
+    .select({
+      attended: sql<number>`count(*) filter (where ${registrations.attendance} = 'attended')::int`,
+      noShow: sql<number>`count(*) filter (where ${registrations.attendance} = 'no_show')::int`,
+    })
+    .from(registrations)
+    .where(
+      and(eq(registrations.userId, userId), eq(registrations.status, "active")),
+    );
+  const lastNoShows = await db
+    .select({
+      registrationId: registrations.id,
+      sessionId: trainingSessions.id,
+      title: trainingSessions.title,
+      startsAt: trainingSessions.startsAt,
+    })
+    .from(registrations)
+    .innerJoin(
+      trainingSessions,
+      eq(registrations.trainingSessionId, trainingSessions.id),
+    )
+    .where(
+      and(
+        eq(registrations.userId, userId),
+        eq(registrations.status, "active"),
+        eq(registrations.attendance, "no_show"),
+      ),
+    )
+    .orderBy(desc(trainingSessions.startsAt))
+    .limit(3);
+  const attended = counts?.attended ?? 0;
+  const noShow = counts?.noShow ?? 0;
+  const marked = attended + noShow;
+  return {
+    attended,
+    noShow,
+    marked,
+    percent: marked > 0 ? Math.round((attended / marked) * 100) : null,
+    lastNoShows,
+  };
 }

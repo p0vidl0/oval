@@ -2,12 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { UserMergePicker } from "@/components/admin/user-merge-picker";
+import { UserPicker } from "@/components/admin/user-picker";
 import {
   executeAdminUserMerge,
   previewAdminUserMerge,
+  searchUsersForMergeAction,
 } from "@/lib/admin/merge-users-actions";
 import type { AdminUserListRow } from "@/lib/admin/user-queries";
+import { can } from "@/lib/auth/capabilities";
 
 export function UserMergeForm() {
   const router = useRouter();
@@ -88,7 +90,8 @@ export function UserMergeForm() {
   return (
     <div className="nl-aside-card">
       <form className="nl-field nl-admin-user-merge-form" onSubmit={onPreview}>
-        <UserMergePicker
+        <UserPicker
+          search={searchUsersForMergeAction}
           label="Цель (останется активным)"
           value={target}
           onChange={onTargetChange}
@@ -96,7 +99,8 @@ export function UserMergeForm() {
           disabled={loading}
           inputTestId="admin-merge-target-search"
         />
-        <UserMergePicker
+        <UserPicker
+          search={searchUsersForMergeAction}
           label="Источник (будет помечен удалённым)"
           value={source}
           onChange={onSourceChange}
@@ -105,7 +109,7 @@ export function UserMergeForm() {
           inputTestId="admin-merge-source-search"
         />
         {source && target && source.id === target.id ? (
-          <p className="caption" style={{ color: "var(--cancel)" }}>
+          <p className="caption nl-error-text">
             Выберите двух разных пользователей.
           </p>
         ) : null}
@@ -120,7 +124,7 @@ export function UserMergeForm() {
       </form>
 
       {error ? (
-        <p className="caption" role="alert" style={{ color: "var(--cancel)" }}>
+        <p className="caption nl-error-text" role="alert">
           {error}
         </p>
       ) : null}
@@ -141,16 +145,14 @@ export function UserMergeForm() {
             <br />
             <span className="nl-mono">{preview.target.id}</span>
           </p>
-          {preview.source.role === "editor" ||
-          preview.source.role === "admin" ||
-          preview.source.role === "super_admin" ? (
-            <p className="caption" style={{ color: "var(--cancel)" }}>
+          {can(preview.source.role, "admin.access") ? (
+            <p className="caption nl-error-text">
               У источника есть доступ в админку — после склейки он будет
               потерян.
             </p>
           ) : null}
           {preview.paymentConflicts.length > 0 ? (
-            <p className="caption" style={{ color: "var(--cancel)" }}>
+            <p className="caption nl-error-text">
               Конфликт оплат за одну тренировку (
               {preview.paymentConflicts.length}
               ). Сначала разберите оплаты в разделе «Оплата», затем повторите

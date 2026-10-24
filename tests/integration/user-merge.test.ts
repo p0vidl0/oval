@@ -2,7 +2,12 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { findMergePaymentConflicts, mergeUsers } from "@/lib/auth/merge-users";
 import { db } from "@/lib/db/client";
-import { payments, registrations, userMerges } from "@/lib/db/schema";
+import {
+  payments,
+  registrationEvents,
+  registrations,
+  userMerges,
+} from "@/lib/db/schema";
 import { account, session, user } from "@/lib/db/schema/auth-schema";
 import { listPublicRoster } from "@/lib/training/registrations";
 import {
@@ -94,16 +99,8 @@ run("user merge", () => {
       sessionId: crypto.randomUUID(),
       postId: crypto.randomUUID(),
     });
-    const targetReg = await seedRegistration(
-      targetId,
-      sessionId,
-      "pending_payment",
-    );
-    const sourceReg = await seedRegistration(
-      sourceId,
-      sessionId,
-      "pending_payment",
-    );
+    const targetReg = await seedRegistration(targetId, sessionId, "due");
+    const sourceReg = await seedRegistration(sourceId, sessionId, "due");
     await seedPendingPayment(targetId, targetReg, 1000);
     await seedPendingPayment(sourceId, sourceReg, 1000);
 
@@ -127,12 +124,8 @@ run("user merge", () => {
       sessionId: crypto.randomUUID(),
       postId: crypto.randomUUID(),
     });
-    const targetReg = await seedRegistration(
-      targetId,
-      sessionId,
-      "pending_payment",
-    );
-    await seedRegistration(sourceId, sessionId, "pending_payment");
+    const targetReg = await seedRegistration(targetId, sessionId, "due");
+    await seedRegistration(sourceId, sessionId, "due");
     await seedPendingPayment(targetId, targetReg, 1000);
 
     expect(await findMergePaymentConflicts(sourceId, targetId)).toHaveLength(0);
@@ -153,11 +146,7 @@ run("user merge", () => {
       sessionId: crypto.randomUUID(),
       postId: crypto.randomUUID(),
     });
-    const targetRegId = await seedRegistration(
-      targetId,
-      sessionId,
-      "pending_payment",
-    );
+    const targetRegId = await seedRegistration(targetId, sessionId, "due");
     const sourceRegId = await seedRegistration(sourceId, sessionId, "paid");
 
     await mergeUsers({
@@ -168,20 +157,33 @@ run("user merge", () => {
       selfService: true,
     });
 
+    // Запись источника переезжает к цели целиком (вместе с платежом),
+    // дубль цели снимается клубом.
     const [kept] = await db
       .select()
       .from(registrations)
-      .where(eq(registrations.id, targetRegId));
-    expect(kept?.userId).toBe(targetId);
-    expect(kept?.status).toBe("paid");
+      .where(eq(registrations.id, sourceRegId));
+    expect(kept).toMatchObject({
+      userId: targetId,
+      status: "active",
+      paymentState: "paid",
+    });
 
     const [cancelled] = await db
       .select()
       .from(registrations)
-      .where(eq(registrations.id, sourceRegId));
-    expect(cancelled?.userId).toBe(sourceId);
-    expect(cancelled?.status).toBe("cancelled");
-    expect(cancelled?.cancelledBy).toBe("admin");
+      .where(eq(registrations.id, targetRegId));
+    expect(cancelled).toMatchObject({
+      userId: targetId,
+      status: "cancelled",
+      cancelledBy: "admin",
+    });
+
+    const events = await db
+      .select()
+      .from(registrationEvents)
+      .where(eq(registrationEvents.kind, "merged"));
+    expect(events).toHaveLength(2);
   });
 
   it("duplicate session: keeps target registration when target is stronger", async () => {
@@ -192,11 +194,7 @@ run("user merge", () => {
       postId: crypto.randomUUID(),
     });
     const targetRegId = await seedRegistration(targetId, sessionId, "paid");
-    const sourceRegId = await seedRegistration(
-      sourceId,
-      sessionId,
-      "pending_payment",
-    );
+    const sourceRegId = await seedRegistration(sourceId, sessionId, "due");
 
     await mergeUsers({
       sourceUserId: sourceId,
@@ -210,15 +208,51 @@ run("user merge", () => {
       .select()
       .from(registrations)
       .where(eq(registrations.id, targetRegId));
-    expect(targetReg?.userId).toBe(targetId);
-    expect(targetReg?.status).toBe("paid");
+    expect(targetReg).toMatchObject({
+      userId: targetId,
+      status: "active",
+      paymentState: "paid",
+    });
 
     const [sourceReg] = await db
       .select()
       .from(registrations)
       .where(eq(registrations.id, sourceRegId));
-    expect(sourceReg?.userId).toBe(sourceId);
-    expect(sourceReg?.status).toBe("cancelled");
+    expect(sourceReg).toMatchObject({ userId: targetId, status: "cancelled" });
+  });
+
+  it("closed registrations on the same session move without conflict", async () => {
+    const targetId = await insertUser({ id: "closed-target" });
+    const sourceId = await insertUser({ id: "closed-source", email: null });
+    const { sessionId } = await seedPublishedAnnouncement({
+      sessionId: crypto.randomUUID(),
+      postId: crypto.randomUUID(),
+    });
+    const targetRegId = await seedRegistration(targetId, sessionId, "paid");
+    const sourceRegId = await seedRegistration(
+      sourceId,
+      sessionId,
+      "refunded",
+      "cancelled",
+    );
+
+    await mergeUsers({
+      sourceUserId: sourceId,
+      targetUserId: targetId,
+      performedByUserId: targetId,
+      kind: "self_link",
+      selfService: true,
+    });
+
+    const rows = await db
+      .select()
+      .from(registrations)
+      .where(eq(registrations.userId, targetId));
+    expect(rows.map((r) => r.id).sort()).toEqual(
+      [sourceRegId, targetRegId].sort(),
+    );
+    const [kept] = rows.filter((r) => r.id === targetRegId);
+    expect(kept?.status).toBe("active");
   });
 
   it("transfers payments user_id to target", async () => {
@@ -381,11 +415,11 @@ run("user merge", () => {
     ).rejects.toMatchObject({ code: "forbidden" });
   });
 
-  it("super_admin merge can merge editor source (selfService off)", async () => {
-    const targetId = await insertUser({ id: "editor-merge-target" });
+  it("super_admin merge can merge admin source (selfService off)", async () => {
+    const targetId = await insertUser({ id: "admin-merge-target" });
     const sourceId = await insertUser({
-      id: "editor-merge-source",
-      role: "editor",
+      id: "admin-merge-source",
+      role: "admin",
       email: null,
     });
     await insertProviderAccount(sourceId, "telegram", "900200");

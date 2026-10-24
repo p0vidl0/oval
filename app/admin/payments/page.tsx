@@ -9,6 +9,7 @@ import {
   adminRemoveRegistrationForm,
   adminTransferPaymentForm,
 } from "@/lib/admin/registration-actions";
+import { describeRegistration } from "@/lib/domain/registration/describe";
 import {
   formatPriceRub,
   formatShortListDate,
@@ -112,10 +113,7 @@ export default async function AdminPaymentsPage({ searchParams }: Props) {
                     {user.name ? (
                       <>
                         <br />
-                        <span
-                          className="nl-mono data-sm"
-                          style={{ color: "var(--ink-muted)" }}
-                        >
+                        <span className="nl-mono data-sm nl-muted">
                           {user.email}
                         </span>
                       </>
@@ -127,7 +125,17 @@ export default async function AdminPaymentsPage({ searchParams }: Props) {
                   <td>
                     <AdminRegistrationRowActions
                       registrationId={registration.id}
-                      status={registration.status}
+                      participantName={
+                        user.name?.trim() || user.email || undefined
+                      }
+                      actions={
+                        describeRegistration({
+                          registration,
+                          session,
+                          viewer: "staff",
+                          now: new Date(),
+                        }).actions
+                      }
                       priceCents={session.priceCents}
                       currentSessionId={session.id}
                       transferTargets={targets

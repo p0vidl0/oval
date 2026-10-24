@@ -2,11 +2,13 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { UserMergeLoginDetails } from "@/components/admin/user-merge-login-details";
-import { searchUsersForMergeAction } from "@/lib/admin/merge-users-actions";
+import type { Paged } from "@/lib/admin/pagination";
 import type { AdminUserListRow } from "@/lib/admin/user-queries";
 
 type Props = {
   label: string;
+  /** Server action поиска с проверкой прав конкретного экрана. */
+  search: (query: string, page: number) => Promise<Paged<AdminUserListRow>>;
   value: AdminUserListRow | null;
   onChange: (user: AdminUserListRow | null) => void;
   excludeUserId?: string | null;
@@ -14,8 +16,10 @@ type Props = {
   inputTestId?: string;
 };
 
-export function UserMergePicker({
+/** Поиск и выбор пользователя (склейка, «пришёл без записи»). */
+export function UserPicker({
   label,
+  search,
   value,
   onChange,
   excludeUserId,
@@ -36,7 +40,7 @@ export function UserMergePicker({
     if (!open) return;
     const timer = setTimeout(() => {
       setLoading(true);
-      void searchUsersForMergeAction(query, page)
+      void search(query, page)
         .then((result) => {
           setItems(
             excludeUserId
@@ -49,7 +53,7 @@ export function UserMergePicker({
         .finally(() => setLoading(false));
     }, 250);
     return () => clearTimeout(timer);
-  }, [open, query, page, excludeUserId]);
+  }, [open, query, page, excludeUserId, search]);
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {

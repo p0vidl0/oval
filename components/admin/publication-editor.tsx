@@ -391,7 +391,7 @@ export function PublicationEditor({
         {post ? (
           <>
             <input type="hidden" name="post_id" value={post.id} />
-            <p className="caption" style={{ color: "var(--ink-muted)" }}>
+            <p className="caption nl-muted">
               Тип: {FEED_POST_TYPE_LABELS[post.type]}
             </p>
           </>

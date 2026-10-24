@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { NlShell } from "@/components/nl/shell";
+import { BackLink } from "@/components/nl/ui";
 import {
   getPrivacyContactEmail,
   getPrivacyOperatorName,
@@ -20,13 +20,7 @@ export default function PrivacyPage() {
   return (
     <NlShell tab="feed">
       <main className="nl-page nl-privacy" style={{ maxWidth: 720 }}>
-        <Link
-          href="/feed"
-          className="caption"
-          style={{ color: "var(--ink-muted)" }}
-        >
-          ← На главную
-        </Link>
+        <BackLink href="/feed">На главную</BackLink>
         <h1
           className="nl-display"
           style={{ marginTop: "var(--space-4)", fontSize: 36 }}

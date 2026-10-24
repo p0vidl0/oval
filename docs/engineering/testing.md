@@ -57,6 +57,12 @@ tests/e2e/            — Playwright
 
 Helpers: [`tests/integration/helpers/`](../../tests/integration/helpers/), [`tests/e2e/helpers/`](../../tests/e2e/helpers/).
 
+Patterns worth reusing:
+
+- **Server action permissions** — [`server-actions-auth.test.ts`](../../tests/integration/server-actions-auth.test.ts) mocks `getServerSession`, `next/cache` and `next/navigation` (`redirect` throws a signal with the URL) and calls actions directly: guest / `user` get `Forbidden`, staff succeed. Add a case for every new admin action.
+- **Migration backfill** — [`migrations-backfill.test.ts`](../../tests/integration/migrations-backfill.test.ts) creates a temporary database, migrates up to the last migration of the old model, inserts rows in old shapes, then applies the rest in one run. Add old-shape rows and assertions when a migration backfills data.
+- **Mobile layout** — e2e at 375 px checks that row buttons stay inside the viewport (`admin-attendance.spec.ts`).
+
 ## CI
 
 [`.github/workflows/test.yml`](../../.github/workflows/test.yml): unit job; integration job with Docker (when enabled).

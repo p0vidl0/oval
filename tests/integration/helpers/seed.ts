@@ -6,7 +6,10 @@ import {
   trainingSessions,
   user,
 } from "@/lib/db/schema";
-import type { RegistrationStatus } from "@/lib/training/status";
+import type {
+  PaymentState,
+  RegistrationStatus,
+} from "@/lib/domain/registration/types";
 
 export async function seedUser(id = "test-user-1") {
   await db
@@ -62,7 +65,8 @@ export async function seedPublishedAnnouncement(options?: {
 export async function seedRegistration(
   userId: string,
   sessionId: string,
-  status: RegistrationStatus = "pending_payment",
+  paymentState: PaymentState = "due",
+  status: RegistrationStatus = "active",
 ) {
   const id = crypto.randomUUID();
   await db.insert(registrations).values({
@@ -70,6 +74,7 @@ export async function seedRegistration(
     userId,
     trainingSessionId: sessionId,
     status,
+    paymentState,
   });
   return id;
 }

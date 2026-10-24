@@ -12,7 +12,7 @@ import {
   type PublicationState,
   readPublishToTelegram,
 } from "@/lib/admin/publication-form";
-import { requireEditor } from "@/lib/admin/require-editor";
+import { requireCapability } from "@/lib/admin/require-capability";
 import {
   appendImagesFromForm,
   syncImagesFromForm,
@@ -53,7 +53,7 @@ function withError(url: string, message: string) {
  * Тренировку вместе с анонсом создаёт `createTrainingAction`.
  */
 export async function createPublication(formData: FormData) {
-  const session = await requireEditor();
+  const session = await requireCapability("feed.publish");
   const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
   const pinned = formData.get("pinned") === "on";
@@ -105,7 +105,7 @@ export async function createPublication(formData: FormData) {
   scheduleSocialPublishAfter(id, state);
   if (sessionId) {
     publishFeedEvent({ type: "session.changed", sessionId });
-    redirect(`/admin/sessions/${sessionId}?tab=history`);
+    redirect(`/admin/sessions/${sessionId}?tab=posts`);
   }
   redirect(
     `/admin/posts/${id}?done=${isPostScheduled(state) ? "scheduled" : "created"}`,
@@ -114,7 +114,7 @@ export async function createPublication(formData: FormData) {
 
 /** Текст, фото, закрепление и статус публикации. Тренировку не трогает. */
 export async function updatePublication(formData: FormData) {
-  await requireEditor();
+  await requireCapability("feed.publish");
   const postId = String(formData.get("post_id") ?? "").trim();
   if (!postId) throw new Error("Не указана публикация");
 

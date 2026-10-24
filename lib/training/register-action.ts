@@ -1,10 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { recordServerEvent } from "@/lib/analytics/record-event";
+import { applyRegistrationEffects } from "@/lib/app/effects";
 import { getServerSession } from "@/lib/auth/session";
-import { publishSessionRegistrationsChanged } from "@/lib/realtime/publish-session-registrations-changed";
 import { registerUserForSession } from "@/lib/training/registrations";
 
 export type RegisterForTrainingResult =
@@ -33,11 +32,7 @@ export async function registerForTrainingClient(
     return { ok: false, error: result.error, feedPostId };
   }
 
-  revalidatePath("/feed");
-  if (feedPostId) revalidatePath(`/feed/${feedPostId}`);
-  revalidatePath("/cabinet");
-
-  await publishSessionRegistrationsChanged(result.sessionId);
+  await applyRegistrationEffects([result.sessionId]);
 
   await recordServerEvent({
     name: "registration_complete",

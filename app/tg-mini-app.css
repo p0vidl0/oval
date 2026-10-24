@@ -23,6 +23,9 @@ html.tg-mini-app .nl-table-wrap,
 html.tg-mini-app .nl-dialog__panel,
 html.tg-mini-app .nl-analytics-consent__inner,
 html.tg-mini-app .nl-admin-callout,
+html.tg-mini-app .nl-list-rows,
+html.tg-mini-app .nl-admin-today,
+html.tg-mini-app .nl-admin-menu__panel,
 html.tg-mini-app .nl-admin-analytics__card,
 html.tg-mini-app .nl-upcoming__item,
 html.tg-mini-app .nl-login-cover__title {
@@ -37,6 +40,7 @@ html.tg-mini-app .nl-page-lead,
 html.tg-mini-app .nl-cabinet-payments,
 html.tg-mini-app .nl-privacy__link,
 html.tg-mini-app .nl-admin-nav a,
+html.tg-mini-app .nl-admin-nav__group-label,
 html.tg-mini-app .nl-admin-tabs__tab,
 html.tg-mini-app .nl-chip,
 html.tg-mini-app
@@ -55,6 +59,7 @@ html.tg-mini-app .nl-status--cancelled {
 html.tg-mini-app .nl-status--draft {
   color: var(--ink-2);
 }
+html.tg-mini-app .nl-attendance__button[aria-pressed="true"],
 html.tg-mini-app .nl-chip[aria-pressed="true"] {
   color: var(--ink-inverse);
 }

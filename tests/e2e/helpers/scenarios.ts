@@ -67,7 +67,8 @@ async function seedRegistrationWithPendingPayment(
     id: registrationId,
     userId,
     trainingSessionId: sessionId,
-    status: "pending_payment",
+    status: "active",
+    paymentState: "due",
   });
   const paymentId = crypto.randomUUID();
   await db.insert(payments).values({
@@ -84,11 +85,38 @@ async function seedRegistrationWithPendingPayment(
 }
 
 export type E2eSeedScenario =
+  | "admin-attendance"
+  | "admin-today"
   | "email-merge-victim"
   | "admin-payment-conflict"
   | "admin-merge-success";
 
+export type AttendanceParticipant = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 export type E2eSeedResult =
+  | {
+      scenario: "admin-attendance";
+      superAdminEmail: string;
+      sessionId: string;
+      /** Три участника «ждёт оплаты», не отмечены. */
+      due: AttendanceParticipant[];
+      /** Уже отмечен «Был» и оплатил наличными — для кабинета. */
+      attended: AttendanceParticipant;
+      /** Без записи — для «Пришёл без записи». */
+      walkIn: AttendanceParticipant;
+    }
+  | {
+      scenario: "admin-today";
+      superAdminEmail: string;
+      sessionTitle: string;
+      participantName: string;
+      sessionId: string;
+      postId: string;
+    }
   | { scenario: "email-merge-victim"; victimEmail: string }
   | {
       scenario: "admin-payment-conflict";
@@ -112,6 +140,134 @@ export async function seedE2eScenario(
   }
 
   const suffix = runId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
+
+  if (scenario === "admin-attendance") {
+    const superAdminEmail = `e2e-att-super-${suffix}@oval.test`;
+    await insertUser({
+      id: `e2e-att-super-${suffix}`,
+      name: "E2E Attendance Super",
+      email: superAdminEmail,
+      role: "super_admin",
+    });
+    const person = async (key: string, name: string) => {
+      const p = {
+        id: `e2e-att-${key}-${suffix}`,
+        name: `${name} ${suffix}`,
+        email: `e2e-att-${key}-${suffix}@oval.test`,
+      };
+      await insertUser(p);
+      return p;
+    };
+    const due = [
+      await person("a", "Alpha"),
+      await person("b", "Bravo"),
+      await person("c", "Charlie"),
+    ];
+    const attended = await person("d", "Delta");
+    const walkIn = await person("w", "Whiskey");
+    const sessionId = `e2e-att-sess-${suffix}`;
+    await db.insert(trainingSessions).values({
+      id: sessionId,
+      title: `E2E Attendance ${suffix}`,
+      startsAt: new Date(Date.now() - 30 * 60_000),
+      priceCents: 50000,
+      capacity: 20,
+      status: "scheduled",
+      onlinePaymentEnabled: false,
+    });
+    for (const p of due) {
+      await db.insert(registrations).values({
+        id: crypto.randomUUID(),
+        userId: p.id,
+        trainingSessionId: sessionId,
+        status: "active",
+        paymentState: "due",
+      });
+    }
+    const attendedRegId = crypto.randomUUID();
+    await db.insert(registrations).values({
+      id: attendedRegId,
+      userId: attended.id,
+      trainingSessionId: sessionId,
+      status: "active",
+      paymentState: "paid",
+      attendance: "attended",
+      attendanceMarkedAt: new Date(),
+    });
+    await db.insert(payments).values({
+      id: crypto.randomUUID(),
+      userId: attended.id,
+      registrationId: attendedRegId,
+      amountCents: 50000,
+      status: "succeeded",
+      provider: "mock",
+      method: "cash",
+      paidAt: new Date(),
+    });
+    return {
+      scenario,
+      superAdminEmail,
+      sessionId,
+      due,
+      attended,
+      walkIn,
+    };
+  }
+
+  if (scenario === "admin-today") {
+    const superAdminEmail = `e2e-today-${suffix}@oval.test`;
+    const sessionTitle = `E2E Today ${suffix}`;
+    const participantName = `E2E Runner ${suffix}`;
+    const participantId = `e2e-today-runner-${suffix}`;
+    const sessionId = `e2e-today-sess-${suffix}`;
+    await insertUser({
+      id: `e2e-today-super-${suffix}`,
+      name: "E2E Today Super",
+      email: superAdminEmail,
+      role: "super_admin",
+    });
+    await insertUser({
+      id: participantId,
+      name: participantName,
+      email: `e2e-today-runner-${suffix}@oval.test`,
+    });
+    // Ближайшая тренировка началась полчаса назад (окно отметки открыто),
+    // оплата на месте.
+    await db.insert(trainingSessions).values({
+      id: sessionId,
+      title: sessionTitle,
+      startsAt: new Date(Date.now() - 30 * 60_000),
+      priceCents: 50000,
+      capacity: 20,
+      status: "scheduled",
+      onlinePaymentEnabled: false,
+    });
+    await db.insert(registrations).values({
+      id: crypto.randomUUID(),
+      userId: participantId,
+      trainingSessionId: sessionId,
+      status: "active",
+      paymentState: "due",
+    });
+    const postId = `e2e-today-post-${suffix}`;
+    await db.insert(feedPosts).values({
+      id: postId,
+      type: "training_announcement",
+      title: sessionTitle,
+      body: "e2e",
+      status: "published",
+      publishedAt: new Date(),
+      relatedSessionId: sessionId,
+    });
+    return {
+      postId,
+      scenario,
+      superAdminEmail,
+      sessionTitle,
+      participantName,
+      sessionId,
+    };
+  }
 
   if (scenario === "email-merge-victim") {
     const victimEmail = `e2e-victim-${suffix}@oval.test`;

@@ -25,6 +25,8 @@ export type FeedCardActions = {
   externalLabel?: string;
   /** Перенос/отмена → анонс тренировки. */
   trainingHref?: string;
+  /** Админу: тренировка в админке (оплата, отметки). */
+  manageHref?: string;
 };
 
 export type FeedCardProps = {

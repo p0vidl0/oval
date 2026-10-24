@@ -55,6 +55,15 @@ export function FeedCardActionsBlock({ actions, previewMode }: Props) {
         </Link>
       ) : null}
       {actions.cancelForm}
+      {actions.manageHref ? (
+        <Link
+          href={actions.manageHref}
+          className="caption nl-card__manage"
+          onClick={onPreviewClick}
+        >
+          Управлять →
+        </Link>
+      ) : null}
     </div>
   );
 }

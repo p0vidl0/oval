@@ -101,10 +101,7 @@ export default async function AdminPostsPage({ searchParams }: Props) {
                         <strong>{post.title}</strong>
                       </Link>
                       {post.pinned ? (
-                        <span
-                          className="nl-mono data-sm"
-                          style={{ color: "var(--ink-muted)" }}
-                        >
+                        <span className="nl-mono data-sm nl-muted">
                           {" "}
                           · закреплено
                         </span>
@@ -136,7 +133,7 @@ export default async function AdminPostsPage({ searchParams }: Props) {
                           {formatTimeHm(tr.startsAt)}
                         </Link>
                       ) : (
-                        <span style={{ color: "var(--ink-muted)" }}>—</span>
+                        <span className="nl-muted">—</span>
                       )}
                     </td>
                   </ClickableRow>

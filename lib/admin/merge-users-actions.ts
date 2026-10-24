@@ -2,37 +2,29 @@
 
 import { revalidatePath } from "next/cache";
 import type { PageRequest } from "@/lib/admin/pagination";
+import { requireCapability } from "@/lib/admin/require-capability";
 import {
   getUserSummary,
   searchUsersForAdminPaged,
 } from "@/lib/admin/user-queries";
+import { applyRegistrationEffects } from "@/lib/app/effects";
 import {
   findMergePaymentConflicts,
   MergeUsersError,
   mergeUsers,
 } from "@/lib/auth/merge-users";
-import { isSuperAdmin } from "@/lib/auth/roles";
-import { getServerSession } from "@/lib/auth/session";
 
 export async function searchUsersForMergeAction(query: string, page: number) {
-  await requireSuperAdmin();
+  await requireCapability("users.merge");
   const request: PageRequest = { page: Math.max(1, page), size: 10 };
   return searchUsersForAdminPaged(query, request);
-}
-
-async function requireSuperAdmin() {
-  const session = await getServerSession();
-  if (!session || !isSuperAdmin(session.user.role as string | undefined)) {
-    throw new Error("Forbidden");
-  }
-  return session;
 }
 
 export async function previewAdminUserMerge(input: {
   sourceUserId: string;
   targetUserId: string;
 }) {
-  await requireSuperAdmin();
+  await requireCapability("users.merge");
   const [source, target] = await Promise.all([
     getUserSummary(input.sourceUserId),
     getUserSummary(input.targetUserId),
@@ -59,7 +51,7 @@ export async function executeAdminUserMerge(input: {
   sourceUserId: string;
   targetUserId: string;
 }): Promise<{ ok: true } | { ok: false; message: string; code?: string }> {
-  const session = await requireSuperAdmin();
+  const session = await requireCapability("users.merge");
   try {
     await mergeUsers({
       sourceUserId: input.sourceUserId,
@@ -75,7 +67,6 @@ export async function executeAdminUserMerge(input: {
     throw error;
   }
   revalidatePath("/admin/users/merge");
-  revalidatePath("/admin/registrations");
-  revalidatePath("/admin/payments");
+  await applyRegistrationEffects([], { realtime: false });
   return { ok: true };
 }

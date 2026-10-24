@@ -12,11 +12,8 @@ import {
   trainingSessionEvents,
   trainingSessions,
 } from "@/lib/db/schema";
+import { insertRegistrationEvents } from "@/lib/domain/registration/events";
 import { livePostCondition } from "@/lib/feed/publication";
-import {
-  ACTIVE_REGISTRATION_STATUSES,
-  type RegistrationStatus,
-} from "@/lib/training/status";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -71,7 +68,7 @@ async function lockSession(tx: Tx, sessionId: string) {
 async function countRegistrations(
   tx: Tx,
   sessionId: string,
-  statuses?: readonly RegistrationStatus[],
+  options?: { activeOnly?: boolean },
 ) {
   const rows = await tx
     .select({ count: sql<number>`count(*)::int` })
@@ -79,9 +76,7 @@ async function countRegistrations(
     .where(
       and(
         eq(registrations.trainingSessionId, sessionId),
-        statuses?.length
-          ? inArray(registrations.status, [...statuses])
-          : undefined,
+        options?.activeOnly ? eq(registrations.status, "active") : undefined,
       ),
     );
   return rows[0]?.count ?? 0;
@@ -209,11 +204,9 @@ export async function updateTrainingSettings(params: {
     const before = await lockSession(tx, params.sessionId);
     if (before.status === "cancelled") fail("Тренировка отменена");
 
-    const active = await countRegistrations(
-      tx,
-      params.sessionId,
-      ACTIVE_REGISTRATION_STATUSES,
-    );
+    const active = await countRegistrations(tx, params.sessionId, {
+      activeOnly: true,
+    });
     if (params.settings.capacity < active) {
       fail(`Лимит мест меньше числа записей (${active})`);
     }
@@ -327,8 +320,8 @@ export async function rescheduleTrainingSession(params: {
 }
 
 /**
- * Отмена тренировки: неоплаченные записи снимаются, оплаченные остаются —
- * по ним админ оформляет возврат или перенос оплаты.
+ * Отмена тренировки: неоплаченные и бесплатные записи снимаются, оплаченные
+ * остаются — по ним админ оформляет возврат или перенос оплаты.
  */
 export async function cancelTrainingSession(params: {
   sessionId: string;
@@ -360,10 +353,20 @@ export async function cancelTrainingSession(params: {
       .where(
         and(
           eq(registrations.trainingSessionId, params.sessionId),
-          eq(registrations.status, "pending_payment"),
+          eq(registrations.status, "active"),
+          inArray(registrations.paymentState, ["due", "free"]),
         ),
       )
       .returning({ id: registrations.id });
+    await insertRegistrationEvents(
+      tx,
+      released.map((r) => ({
+        registrationId: r.id,
+        sessionId: params.sessionId,
+        kind: "released" as const,
+        actorUserId: params.actorUserId,
+      })),
+    );
 
     const postId = await insertChangePost(tx, {
       type: "training_cancelled",
@@ -396,13 +399,18 @@ async function refundRegistrationInTx(
     .where(eq(registrations.id, registrationId))
     .for("update");
   const reg = rows[0] ?? fail("Запись не найдена");
-  if (reg.status !== "paid")
+  if (reg.status !== "active" || reg.paymentState !== "paid")
     fail("Возврат возможен только по оплаченной записи");
 
   const now = new Date();
   await tx
     .update(registrations)
-    .set({ status: "refunded", updatedAt: now })
+    .set({
+      status: "cancelled",
+      cancelledBy: "admin",
+      paymentState: "refunded",
+      updatedAt: now,
+    })
     .where(eq(registrations.id, registrationId));
 
   const payRows = await tx
@@ -424,6 +432,15 @@ async function refundRegistrationInTx(
       })
       .where(eq(payments.id, pay.id));
   }
+  await insertRegistrationEvents(tx, [
+    {
+      registrationId,
+      sessionId: reg.trainingSessionId,
+      kind: "refunded",
+      payload: pay ? { paymentId: pay.id, amountCents: pay.amountCents } : {},
+      actorUserId,
+    },
+  ]);
   return reg.trainingSessionId;
 }
 
@@ -431,6 +448,7 @@ async function transferRegistrationInTx(
   tx: Tx,
   fromRegistrationId: string,
   targetSessionId: string,
+  actorUserId: string | null,
 ) {
   const fromRows = await tx
     .select()
@@ -438,7 +456,7 @@ async function transferRegistrationInTx(
     .where(eq(registrations.id, fromRegistrationId))
     .for("update");
   const from = fromRows[0];
-  if (!from || from.status !== "paid") {
+  if (!from || from.status !== "active" || from.paymentState !== "paid") {
     fail("Перенос возможен только с оплаченной записи");
   }
   if (from.trainingSessionId === targetSessionId) {
@@ -449,6 +467,8 @@ async function transferRegistrationInTx(
   if (target.status !== "scheduled") fail("Целевая тренировка отменена");
 
   const now = new Date();
+  // Активная запись на целевую тренировку переиспользуется (ждала оплаты),
+  // закрытые остаются в истории — тогда создаётся новая строка.
   const existing = await tx
     .select()
     .from(registrations)
@@ -456,36 +476,63 @@ async function transferRegistrationInTx(
       and(
         eq(registrations.userId, from.userId),
         eq(registrations.trainingSessionId, targetSessionId),
+        eq(registrations.status, "active"),
       ),
-    );
+    )
+    .for("update");
   const targetReg = existing[0];
-  if (targetReg?.status === "paid") {
+  if (targetReg && targetReg.paymentState !== "due") {
     fail("Участник уже оплатил целевую тренировку");
   }
+  const targetRegistrationId = targetReg?.id ?? crypto.randomUUID();
   if (targetReg) {
     await tx
       .update(registrations)
       .set({
-        status: "paid",
-        cancelledBy: null,
+        paymentState: "paid",
         transferredFromRegistrationId: fromRegistrationId,
         updatedAt: now,
       })
       .where(eq(registrations.id, targetReg.id));
   } else {
     await tx.insert(registrations).values({
-      id: crypto.randomUUID(),
+      id: targetRegistrationId,
       userId: from.userId,
       trainingSessionId: targetSessionId,
-      status: "paid",
+      status: "active",
+      paymentState: "paid",
       transferredFromRegistrationId: fromRegistrationId,
     });
   }
 
   await tx
     .update(registrations)
-    .set({ status: "transferred", updatedAt: now })
+    .set({
+      status: "cancelled",
+      cancelledBy: "transferred",
+      paymentState: "moved",
+      updatedAt: now,
+    })
     .where(eq(registrations.id, fromRegistrationId));
+  await insertRegistrationEvents(tx, [
+    {
+      registrationId: fromRegistrationId,
+      sessionId: from.trainingSessionId,
+      kind: "transferred_out",
+      payload: { toRegistrationId: targetRegistrationId, targetSessionId },
+      actorUserId,
+    },
+    {
+      registrationId: targetRegistrationId,
+      sessionId: targetSessionId,
+      kind: "transferred_in",
+      payload: {
+        fromRegistrationId,
+        fromSessionId: from.trainingSessionId,
+      },
+      actorUserId,
+    },
+  ]);
 
   return { fromSessionId: from.trainingSessionId };
 }
@@ -503,9 +550,15 @@ export async function refundRegistration(params: {
 export async function transferRegistration(params: {
   registrationId: string;
   targetSessionId: string;
+  actorUserId: string | null;
 }): Promise<{ fromSessionId: string }> {
   return db.transaction((tx) =>
-    transferRegistrationInTx(tx, params.registrationId, params.targetSessionId),
+    transferRegistrationInTx(
+      tx,
+      params.registrationId,
+      params.targetSessionId,
+      params.actorUserId,
+    ),
   );
 }
 
@@ -516,7 +569,8 @@ async function paidRegistrationIds(tx: Tx, sessionId: string) {
     .where(
       and(
         eq(registrations.trainingSessionId, sessionId),
-        eq(registrations.status, "paid"),
+        eq(registrations.status, "active"),
+        eq(registrations.paymentState, "paid"),
       ),
     );
   return rows.map((r) => r.id);
@@ -540,11 +594,17 @@ export async function refundAllPaid(params: {
 export async function transferAllPaid(params: {
   sessionId: string;
   targetSessionId: string;
+  actorUserId: string | null;
 }): Promise<{ count: number }> {
   return db.transaction(async (tx) => {
     const ids = await paidRegistrationIds(tx, params.sessionId);
     for (const id of ids) {
-      await transferRegistrationInTx(tx, id, params.targetSessionId);
+      await transferRegistrationInTx(
+        tx,
+        id,
+        params.targetSessionId,
+        params.actorUserId,
+      );
     }
     return { count: ids.length };
   });

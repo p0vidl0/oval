@@ -121,7 +121,7 @@ function AdminUserRolePickerForm({
         </span>
       </button>
       {error ? (
-        <p className="caption" role="alert" style={{ color: "var(--cancel)" }}>
+        <p className="caption nl-error-text" role="alert">
           {error}
         </p>
       ) : null}

@@ -1,24 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireCapability } from "@/lib/admin/require-capability";
 import { isAssignableRole } from "@/lib/auth/assignable-roles";
-import { isSuperAdmin } from "@/lib/auth/roles";
-import { getServerSession } from "@/lib/auth/session";
 import { SetUserRoleError, setUserRole } from "@/lib/auth/set-user-role";
-
-async function requireSuperAdmin() {
-  const session = await getServerSession();
-  if (!session || !isSuperAdmin(session.user.role as string | undefined)) {
-    throw new Error("Forbidden");
-  }
-  return session;
-}
 
 export async function setUserRoleAction(input: {
   userId: string;
   role: string;
 }): Promise<{ status: "ok" } | { status: "error"; message: string }> {
-  await requireSuperAdmin();
+  await requireCapability("users.manageRoles");
 
   if (!isAssignableRole(input.role)) {
     return { status: "error", message: "Недопустимая роль" };

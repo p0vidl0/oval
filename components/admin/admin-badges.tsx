@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ClearAdminFlash } from "@/components/admin/clear-admin-flash";
 import { NlStatus } from "@/components/nl/status";
 import type { FeedPostStatus } from "@/lib/feed/types";
 import { FEED_POST_STATUS_LABELS } from "@/lib/feed/types";
@@ -49,7 +50,7 @@ export function PostStatusBadge({
   );
 }
 
-/** Сообщение после действия (`?done=`) или ошибка (`?error=`). */
+/** Сообщение после действия (`?done=`) или ошибка (`?error=`); показывается один раз. */
 export function AdminBanner({
   tone,
   children,
@@ -63,6 +64,7 @@ export function AdminBanner({
       role={tone === "error" ? "alert" : "status"}
     >
       {children}
+      <ClearAdminFlash />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { PaymentCheckoutTracker } from "@/components/analytics/payment-checkout-tracker";
 import { NlShell } from "@/components/nl/shell";
 import { NlStatus } from "@/components/nl/status";
+import { BackLink } from "@/components/nl/ui";
 import { getServerSession } from "@/lib/auth/session";
 import { formatDateTimeRu, formatPriceRub } from "@/lib/format/datetime";
 import { ensurePaymentForRegistration } from "@/lib/payments/checkout";
@@ -29,7 +30,7 @@ export default async function CheckoutPage({ params }: Props) {
     notFound();
   }
 
-  if (registration.status === "paid") {
+  if (registration.paymentState === "paid") {
     redirect("/cabinet");
   }
 
@@ -44,13 +45,7 @@ export default async function CheckoutPage({ params }: Props) {
         sessionId={training.id}
       />
       <main className="nl-page" style={{ maxWidth: 520 }}>
-        <Link
-          href="/cabinet"
-          className="caption"
-          style={{ color: "var(--ink-muted)" }}
-        >
-          ← Кабинет
-        </Link>
+        <BackLink href="/cabinet">Кабинет</BackLink>
         <h1
           className="nl-display"
           style={{ marginTop: "var(--space-4)", fontSize: 36 }}

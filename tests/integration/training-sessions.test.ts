@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { removePostImages } from "@/lib/admin/save-post-images";
 import { db } from "@/lib/db/client";
@@ -6,19 +6,25 @@ import {
   feedPosts,
   payments,
   postImages,
+  registrationEvents,
   registrations,
   trainingSessionEvents,
   trainingSessions,
 } from "@/lib/db/schema";
 import { listImagesForPost } from "@/lib/feed/post-images";
 import { listPublishedFeedPosts } from "@/lib/feed/queries";
+import { ensurePaymentForRegistration } from "@/lib/payments/checkout";
+import { markRegistrationPaid } from "@/lib/payments/mark-paid";
 import {
   getAdminSession,
   listAdminSessions,
   listPaidOnCancelled,
   listSessionRegistrationsAdmin,
 } from "@/lib/training/admin-queries";
-import { cancelUserRegistration } from "@/lib/training/registrations";
+import {
+  cancelUserRegistration,
+  registerUserForSession,
+} from "@/lib/training/registrations";
 import {
   cancelTrainingSession,
   createTrainingSession,
@@ -26,6 +32,7 @@ import {
   refundRegistration,
   rescheduleTrainingSession,
   TrainingServiceError,
+  transferAllPaid,
   transferRegistration,
   updateTrainingSettings,
 } from "@/lib/training/session-service";
@@ -171,7 +178,10 @@ run("training sessions", () => {
       actorUserId: null,
     });
     expect(postId).toBeNull();
-    expect((await regStatus(regId))?.status).toBe("pending_payment");
+    expect(await regStatus(regId)).toMatchObject({
+      status: "active",
+      paymentState: "due",
+    });
 
     const row = await getAdminSession(sessionId);
     expect(row?.session.startsAt.toISOString()).toBe(
@@ -180,11 +190,16 @@ run("training sessions", () => {
     expect(row?.wasRescheduled).toBe(true);
   });
 
-  it("cancel releases unpaid, keeps paid, publishes post", async () => {
-    const { sessionId } = await seedPublishedAnnouncement();
+  it("cancel releases unpaid and free, keeps paid, publishes post", async () => {
+    const { sessionId } = await seedPublishedAnnouncement({ capacity: 5 });
     const unpaidId = await seedRegistration(
       await seedUser("cancel-unpaid"),
       sessionId,
+    );
+    const freeId = await seedRegistration(
+      await seedUser("cancel-free"),
+      sessionId,
+      "free",
     );
     const paidId = await seedPaid(await seedUser("cancel-paid"), sessionId);
 
@@ -194,12 +209,24 @@ run("training sessions", () => {
       post: { mode: "publish", title: "Тренировка отменена", body: "" },
       actorUserId: null,
     });
-    expect(releasedCount).toBe(1);
-    expect(await regStatus(unpaidId)).toMatchObject({
-      status: "cancelled",
-      cancelledBy: "session_cancelled",
+    expect(releasedCount).toBe(2);
+    for (const id of [unpaidId, freeId]) {
+      expect(await regStatus(id)).toMatchObject({
+        status: "cancelled",
+        cancelledBy: "session_cancelled",
+      });
+    }
+    expect(await regStatus(paidId)).toMatchObject({
+      status: "active",
+      paymentState: "paid",
     });
-    expect((await regStatus(paidId))?.status).toBe("paid");
+    const released = await db
+      .select()
+      .from(registrationEvents)
+      .where(eq(registrationEvents.kind, "released"));
+    expect(released.map((e) => e.registrationId).sort()).toEqual(
+      [unpaidId, freeId].sort(),
+    );
 
     const session = (
       await db
@@ -232,8 +259,18 @@ run("training sessions", () => {
   it("refund marks registration refunded and payment cancelled", async () => {
     const { sessionId } = await seedPublishedAnnouncement();
     const regId = await seedPaid(await seedUser("refund-user"), sessionId);
-    await refundRegistration({ registrationId: regId, actorUserId: null });
-    expect((await regStatus(regId))?.status).toBe("refunded");
+    const adminId = await seedUser("refund-admin");
+    await refundRegistration({ registrationId: regId, actorUserId: adminId });
+    expect(await regStatus(regId)).toMatchObject({
+      status: "cancelled",
+      cancelledBy: "admin",
+      paymentState: "refunded",
+    });
+    const [event] = await db
+      .select()
+      .from(registrationEvents)
+      .where(eq(registrationEvents.registrationId, regId));
+    expect(event).toMatchObject({ kind: "refunded", actorUserId: adminId });
     const pay = await db
       .select()
       .from(payments)
@@ -245,15 +282,21 @@ run("training sessions", () => {
     expect(closed.map((r) => r.registration.id)).toEqual([regId]);
   });
 
-  it("refundAllPaid handles every paid registration", async () => {
+  it("refundAllPaid handles every paid registration, not free ones", async () => {
     const { sessionId } = await seedPublishedAnnouncement({ capacity: 5 });
     await seedPaid(await seedUser("bulk-1"), sessionId);
     await seedPaid(await seedUser("bulk-2"), sessionId);
+    const freeId = await seedRegistration(
+      await seedUser("bulk-free"),
+      sessionId,
+      "free",
+    );
     const { count } = await refundAllPaid({ sessionId, actorUserId: null });
     expect(count).toBe(2);
-    expect(await listSessionRegistrationsAdmin(sessionId, "paid")).toHaveLength(
-      0,
-    );
+    expect((await regStatus(freeId))?.paymentState).toBe("free");
+    // «Оплатили» включает бесплатные: осталась только она.
+    const remaining = await listSessionRegistrationsAdmin(sessionId, "paid");
+    expect(remaining.map((r) => r.registration.id)).toEqual([freeId]);
   });
 
   it("transfer marks source transferred and creates paid target", async () => {
@@ -263,10 +306,28 @@ run("training sessions", () => {
       startsAt: new Date("2027-03-01T14:00:00Z"),
     });
     const regId = await seedPaid(userId, from);
-    await transferRegistration({ registrationId: regId, targetSessionId: to });
-    expect((await regStatus(regId))?.status).toBe("transferred");
+    await transferRegistration({
+      registrationId: regId,
+      targetSessionId: to,
+      actorUserId: null,
+    });
+    expect(await regStatus(regId)).toMatchObject({
+      status: "cancelled",
+      cancelledBy: "transferred",
+      paymentState: "moved",
+    });
     const target = await listSessionRegistrationsAdmin(to, "paid");
-    expect(target[0]?.registration.transferredFromRegistrationId).toBe(regId);
+    expect(target[0]?.registration).toMatchObject({
+      transferredFromRegistrationId: regId,
+      paymentState: "paid",
+    });
+    const kinds = await db
+      .select({ kind: registrationEvents.kind })
+      .from(registrationEvents);
+    expect(kinds.map((k) => k.kind).sort()).toEqual([
+      "transferred_in",
+      "transferred_out",
+    ]);
 
     // Деньги «переезжают» вместе с записью.
     expect(await getAdminSession(from)).toMatchObject({
@@ -279,11 +340,281 @@ run("training sessions", () => {
     });
   });
 
+  it("re-registration after refund is a new row that can be paid", async () => {
+    const userId = await seedUser("refund-again");
+    const coachId = await seedUser("refund-again-coach");
+    const { sessionId } = await seedPublishedAnnouncement({
+      priceCents: 70000,
+    });
+    const regId = await seedPaid(userId, sessionId);
+    await refundRegistration({ registrationId: regId, actorUserId: null });
+
+    const again = await registerUserForSession(userId, sessionId);
+    if (!again.ok) throw new Error(again.error);
+    expect(again.registrationId).not.toBe(regId);
+
+    const ensured = await ensurePaymentForRegistration(
+      again.registrationId,
+      userId,
+    );
+    expect(ensured.ok && ensured.payment).toMatchObject({
+      status: "pending",
+      amountCents: 70000,
+    });
+
+    const paid = await markRegistrationPaid({
+      registrationId: again.registrationId,
+      source: "admin_onsite",
+      actorUserId: coachId,
+    });
+    expect(paid).toEqual({ ok: true, already: false });
+    expect(await regStatus(again.registrationId)).toMatchObject({
+      status: "active",
+      paymentState: "paid",
+    });
+    // Старая запись и её возврат не тронуты.
+    expect((await regStatus(regId))?.paymentState).toBe("refunded");
+    const [oldPay] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.registrationId, regId));
+    expect(oldPay?.status).toBe("cancelled");
+    const [event] = await db
+      .select()
+      .from(registrationEvents)
+      .where(
+        and(
+          eq(registrationEvents.registrationId, again.registrationId),
+          eq(registrationEvents.kind, "payment_succeeded"),
+        ),
+      );
+    expect(event).toMatchObject({ actorUserId: coachId });
+    expect(event?.payload).toMatchObject({ source: "admin_onsite" });
+  });
+
+  it("re-registration on the transfer source can be marked paid", async () => {
+    const userId = await seedUser("transfer-back");
+    const coachId = await seedUser("transfer-back-coach");
+    const { sessionId: from } = await seedPublishedAnnouncement();
+    const { sessionId: to } = await seedPublishedAnnouncement({
+      startsAt: new Date("2027-03-01T14:00:00Z"),
+    });
+    const regId = await seedPaid(userId, from);
+    await transferRegistration({
+      registrationId: regId,
+      targetSessionId: to,
+      actorUserId: null,
+    });
+
+    const again = await registerUserForSession(userId, from);
+    if (!again.ok) throw new Error(again.error);
+    expect(again.registrationId).not.toBe(regId);
+    const paid = await markRegistrationPaid({
+      registrationId: again.registrationId,
+      source: "admin_onsite",
+      actorUserId: coachId,
+    });
+    expect(paid).toEqual({ ok: true, already: false });
+    expect((await regStatus(again.registrationId))?.paymentState).toBe("paid");
+  });
+
+  it("on-site payment stores the chosen method", async () => {
+    const coachId = await seedUser("method-coach");
+    const { sessionId } = await seedPublishedAnnouncement({ capacity: 5 });
+    const transferReg = await seedRegistration(
+      await seedUser("method-transfer"),
+      sessionId,
+    );
+    const cashReg = await seedRegistration(
+      await seedUser("method-cash"),
+      sessionId,
+    );
+    await markRegistrationPaid({
+      registrationId: transferReg,
+      source: "admin_onsite",
+      actorUserId: coachId,
+      method: "bank_transfer",
+    });
+    await markRegistrationPaid({
+      registrationId: cashReg,
+      source: "admin_onsite",
+      actorUserId: coachId,
+    });
+    const methods = await db
+      .select({
+        registrationId: payments.registrationId,
+        method: payments.method,
+      })
+      .from(payments);
+    expect(
+      Object.fromEntries(methods.map((m) => [m.registrationId, m.method])),
+    ).toEqual({
+      [transferReg]: "bank_transfer",
+      [cashReg]: "cash",
+    });
+    const [event] = await db
+      .select()
+      .from(registrationEvents)
+      .where(
+        and(
+          eq(registrationEvents.registrationId, transferReg),
+          eq(registrationEvents.kind, "payment_succeeded"),
+        ),
+      );
+    expect(event?.payload).toMatchObject({
+      source: "admin_onsite",
+      method: "bank_transfer",
+    });
+  });
+
+  it("transferAllPaid moves every paid registration with events", async () => {
+    const adminId = await seedUser("bulk-transfer-admin");
+    const { sessionId: from } = await seedPublishedAnnouncement({
+      capacity: 5,
+    });
+    const { sessionId: to } = await seedPublishedAnnouncement({
+      capacity: 5,
+      startsAt: new Date("2027-04-01T14:00:00Z"),
+    });
+    const a = await seedPaid(await seedUser("bulk-tr-a"), from);
+    const b = await seedPaid(await seedUser("bulk-tr-b"), from);
+    const due = await seedRegistration(await seedUser("bulk-tr-due"), from);
+
+    const { count } = await transferAllPaid({
+      sessionId: from,
+      targetSessionId: to,
+      actorUserId: adminId,
+    });
+    expect(count).toBe(2);
+    for (const id of [a, b]) {
+      expect(await regStatus(id)).toMatchObject({
+        status: "cancelled",
+        paymentState: "moved",
+      });
+    }
+    expect((await regStatus(due))?.paymentState).toBe("due");
+    expect(await getAdminSession(to)).toMatchObject({ taken: 2, paidMoney: 2 });
+    const events = await db
+      .select()
+      .from(registrationEvents)
+      .where(eq(registrationEvents.actorUserId, adminId));
+    expect(events).toHaveLength(4);
+  });
+
+  it("transfer reuses the active unpaid registration on the target", async () => {
+    const userId = await seedUser("reuse-target");
+    const { sessionId: from } = await seedPublishedAnnouncement();
+    const { sessionId: to } = await seedPublishedAnnouncement({
+      startsAt: new Date("2027-05-01T14:00:00Z"),
+    });
+    const source = await seedPaid(userId, from);
+    const targetDue = await seedRegistration(userId, to);
+
+    await transferRegistration({
+      registrationId: source,
+      targetSessionId: to,
+      actorUserId: null,
+    });
+    expect(await regStatus(targetDue)).toMatchObject({
+      status: "active",
+      paymentState: "paid",
+      transferredFromRegistrationId: source,
+    });
+    const onTarget = await db
+      .select()
+      .from(registrations)
+      .where(eq(registrations.trainingSessionId, to));
+    expect(onTarget).toHaveLength(1);
+  });
+
+  it("transfer refuses when the target is already paid", async () => {
+    const userId = await seedUser("paid-target");
+    const { sessionId: from } = await seedPublishedAnnouncement();
+    const { sessionId: to } = await seedPublishedAnnouncement({
+      startsAt: new Date("2027-05-02T14:00:00Z"),
+    });
+    const source = await seedPaid(userId, from);
+    await seedPaid(userId, to);
+    await expect(
+      transferRegistration({
+        registrationId: source,
+        targetSessionId: to,
+        actorUserId: null,
+      }),
+    ).rejects.toThrow("уже оплатил");
+    expect((await regStatus(source))?.paymentState).toBe("paid");
+  });
+
+  it("mark paid repairs a legacy row stuck with a cancelled payment", async () => {
+    const userId = await seedUser("legacy-stuck");
+    const coachId = await seedUser("legacy-coach");
+    const { sessionId } = await seedPublishedAnnouncement({
+      priceCents: 70000,
+    });
+    const regId = await seedRegistration(userId, sessionId);
+    await db.insert(payments).values({
+      id: crypto.randomUUID(),
+      userId,
+      registrationId: regId,
+      amountCents: 50000,
+      status: "cancelled",
+      provider: "mock",
+    });
+    expect(
+      await markRegistrationPaid({
+        registrationId: regId,
+        source: "admin_onsite",
+        actorUserId: coachId,
+        method: "cash",
+      }),
+    ).toEqual({ ok: true, already: false });
+    const [pay] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.registrationId, regId));
+    expect(pay).toMatchObject({
+      status: "succeeded",
+      amountCents: 70000,
+      method: "cash",
+    });
+    expect((pay?.metadata as { previous?: unknown[] }).previous).toHaveLength(
+      1,
+    );
+  });
+
+  it("collected money ignores free registrations", async () => {
+    const { sessionId } = await seedPublishedAnnouncement({ capacity: 5 });
+    await seedPaid(await seedUser("collect-paid"), sessionId);
+    await seedRegistration(await seedUser("collect-free"), sessionId, "free");
+    expect(await getAdminSession(sessionId)).toMatchObject({
+      taken: 2,
+      paid: 2,
+      paidMoney: 1,
+      collectedCents: 50000,
+    });
+  });
+
+  it("checkout repairs a pending registration stuck with a cancelled payment", async () => {
+    const userId = await seedUser("stuck-payment");
+    const { sessionId } = await seedPublishedAnnouncement();
+    const regId = await seedRegistration(userId, sessionId);
+    await db.insert(payments).values({
+      id: crypto.randomUUID(),
+      userId,
+      registrationId: regId,
+      amountCents: 50000,
+      status: "cancelled",
+      provider: "mock",
+    });
+    const ensured = await ensurePaymentForRegistration(regId, userId);
+    expect(ensured.ok && ensured.payment?.status).toBe("pending");
+  });
+
   it("user cancel records source", async () => {
     const userId = await seedUser("self-cancel");
     const { sessionId } = await seedPublishedAnnouncement();
     const regId = await seedRegistration(userId, sessionId);
-    await cancelUserRegistration(regId, userId, false);
+    await cancelUserRegistration(regId, userId, "participant");
     expect((await regStatus(regId))?.cancelledBy).toBe("user");
   });
 

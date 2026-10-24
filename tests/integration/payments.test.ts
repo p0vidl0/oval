@@ -68,7 +68,7 @@ run("payments", () => {
       .select()
       .from(registrations)
       .where(eq(registrations.id, regId));
-    expect(reg[0]?.status).toBe("paid");
+    expect(reg[0]?.paymentState).toBe("paid");
 
     const second = await confirmPaymentSucceeded({
       paymentId,

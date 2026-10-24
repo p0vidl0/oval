@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FeedCancelButton } from "@/components/nl/feed-cancel-button";
 import { NlFeedPostCard } from "@/components/nl/feed-post-card";
 import { FeedRegisterButton } from "@/components/nl/feed-register-button";
+import { adminSessionHref } from "@/lib/admin/routes";
+import { initialPaymentState } from "@/lib/domain/registration/types";
 import {
   deriveCanRegister,
   type FeedLiveCard,
@@ -12,7 +14,6 @@ import {
 import type { FeedFilterKey } from "@/lib/feed/filter";
 import { postMatchesFilter } from "@/lib/feed/filter";
 import type { FeedRealtimeEvent } from "@/lib/realtime/feed-event-bus";
-import { canUserCancelRegistration } from "@/lib/training/status";
 
 type Props = {
   initialCards: FeedLiveCard[];
@@ -20,6 +21,8 @@ type Props = {
   isLoggedIn: boolean;
   /** У пользователя нет имени — перед записью спросить его. */
   needsName?: boolean;
+  /** Админ: ссылка «Управлять» на тренировку в админке. */
+  canManage?: boolean;
 };
 
 function patchCardAfterRegister(
@@ -39,8 +42,8 @@ function patchCardAfterRegister(
     userBadge: "Вы записаны",
     userRegistration: {
       id: registrationId,
-      // Бесплатная запись сразу считается оплаченной (как на сервере).
-      status: training.priceCents > 0 ? "pending_payment" : "paid",
+      // Как на сервере: `initialPaymentState`.
+      paymentState: initialPaymentState(training.priceCents),
     },
     training: { ...training, activeCount },
     actions: {
@@ -128,6 +131,7 @@ export function FeedLiveList({
   filter,
   isLoggedIn,
   needsName = false,
+  canManage = false,
 }: Props) {
   const [cards, setCards] = useState(initialCards);
 
@@ -262,7 +266,7 @@ export function FeedLiveList({
           reg !== null &&
           card.training !== null &&
           new Date(card.training.startsAt) > new Date() &&
-          canUserCancelRegistration(reg, card.training);
+          reg.paymentState !== "paid";
 
         return (
           <NlFeedPostCard
@@ -292,6 +296,10 @@ export function FeedLiveList({
               payLabel: card.actions.payLabel,
               externalHref: card.actions.externalHref,
               trainingHref: card.actions.trainingHref,
+              manageHref:
+                canManage && card.training
+                  ? adminSessionHref(card.training.sessionId)
+                  : undefined,
               cancelForm:
                 showCancel && reg ? (
                   <FeedCancelButton

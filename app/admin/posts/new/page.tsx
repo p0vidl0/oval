@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminBanner } from "@/components/admin/admin-badges";
 import { PublicationEditor } from "@/components/admin/publication-editor";
+import { BackLink } from "@/components/nl/ui";
 import { createPublication } from "@/lib/admin/feed-actions";
 import { isTelegramChannelPublishConfigured } from "@/lib/bots/telegram/channel-config";
 import {
@@ -22,13 +23,11 @@ export default async function NewPublicationPage({ searchParams }: Props) {
 
   return (
     <main>
-      <Link
+      <BackLink
         href={training ? `/admin/sessions/${training.id}` : "/admin/posts"}
-        className="caption"
-        style={{ color: "var(--ink-muted)" }}
       >
-        {training ? `← ${training.title}` : "← Публикации"}
-      </Link>
+        {training ? training.title : "Публикации"}
+      </BackLink>
       <h1
         className="nl-page-title nl-page-title--admin"
         style={{ marginTop: "var(--space-4)" }}

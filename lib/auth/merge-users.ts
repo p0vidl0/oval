@@ -9,6 +9,7 @@ import {
   userMerges,
 } from "@/lib/db/schema";
 import { account, session, user } from "@/lib/db/schema/auth-schema";
+import { insertRegistrationEvents } from "@/lib/domain/registration/events";
 
 export class MergeUsersError extends Error {
   constructor(
@@ -33,12 +34,21 @@ const BLOCKING_PAYMENT_STATUSES = ["pending", "succeeded"] as const;
 type RegRow = typeof registrations.$inferSelect;
 type PayRow = typeof payments.$inferSelect;
 
+/** Какую из двух активных записей на одну тренировку оставить. */
 function regScore(reg: RegRow, pay: PayRow | undefined): number {
   if (pay?.status === "succeeded") return 4;
   if (pay?.status === "pending") return 3;
-  if (reg.status === "paid") return 2;
-  if (reg.status === "pending_payment") return 1;
-  return 0;
+  if (reg.paymentState === "paid") return 2;
+  return 1;
+}
+
+/** Активные записи пользователя по тренировке (частичный unique: не больше одной). */
+function activeBySession(rows: RegRow[]) {
+  return new Map(
+    rows
+      .filter((row) => row.status === "active")
+      .map((row) => [row.trainingSessionId, row]),
+  );
 }
 
 export async function findMergePaymentConflicts(
@@ -56,12 +66,11 @@ export async function findMergePaymentConflicts(
       .where(eq(registrations.userId, targetUserId)),
   ]);
 
-  const targetBySession = new Map(
-    targetRegs.map((row) => [row.trainingSessionId, row]),
-  );
+  const targetBySession = activeBySession(targetRegs);
   const conflicts: MergePaymentConflict[] = [];
 
   for (const sourceReg of sourceRegs) {
+    if (sourceReg.status !== "active") continue;
     const targetReg = targetBySession.get(sourceReg.trainingSessionId);
     if (!targetReg) continue;
 
@@ -181,9 +190,7 @@ export async function mergeUsers(input: MergeUsersInput): Promise<string> {
       .select()
       .from(registrations)
       .where(eq(registrations.userId, target.id));
-    const targetBySession = new Map(
-      targetRegs.map((row) => [row.trainingSessionId, row]),
-    );
+    const targetBySession = activeBySession(targetRegs);
 
     const allRegIds = [
       ...sourceRegs.map((r) => r.id),
@@ -200,75 +207,56 @@ export async function mergeUsers(input: MergeUsersInput): Promise<string> {
       }
     }
 
+    // Закрытые записи переезжают к цели всегда. Коллизия возможна только
+    // между двумя активными записями на одну тренировку: остаётся сильнейшая,
+    // вторая снимается клубом (строка с её платежом не меняется).
+    const mergeEvent = (reg: RegRow, cancelled: boolean) => ({
+      registrationId: reg.id,
+      sessionId: reg.trainingSessionId,
+      kind: "merged" as const,
+      payload: { fromUserId: source.id, toUserId: target.id, cancelled },
+      actorUserId: input.performedByUserId,
+    });
+    const moveToTarget = async (reg: RegRow) => {
+      await tx
+        .update(registrations)
+        .set({ userId: target.id, updatedAt: new Date() })
+        .where(eq(registrations.id, reg.id));
+      snapshot.movedRegistrationIds?.push(reg.id);
+    };
+    const cancelByMerge = async (reg: RegRow) => {
+      await tx
+        .update(registrations)
+        .set({
+          status: "cancelled",
+          cancelledBy: "admin",
+          updatedAt: new Date(),
+        })
+        .where(eq(registrations.id, reg.id));
+      snapshot.cancelledRegistrationIds?.push(reg.id);
+    };
+
     for (const sourceReg of sourceRegs) {
-      const targetReg = targetBySession.get(sourceReg.trainingSessionId);
+      const targetReg =
+        sourceReg.status === "active"
+          ? targetBySession.get(sourceReg.trainingSessionId)
+          : undefined;
       if (!targetReg) {
-        await tx
-          .update(registrations)
-          .set({ userId: target.id, updatedAt: new Date() })
-          .where(eq(registrations.id, sourceReg.id));
-        snapshot.movedRegistrationIds?.push(sourceReg.id);
+        await moveToTarget(sourceReg);
+        await insertRegistrationEvents(tx, [mergeEvent(sourceReg, false)]);
         continue;
       }
 
-      const sourcePay = payByRegId.get(sourceReg.id);
-      const targetPay = payByRegId.get(targetReg.id);
       const keepSource =
-        regScore(sourceReg, sourcePay) > regScore(targetReg, targetPay);
-
-      if (keepSource) {
-        const sourcePays = await tx
-          .select()
-          .from(payments)
-          .where(eq(payments.registrationId, sourceReg.id));
-        for (const pay of sourcePays) {
-          await tx
-            .update(payments)
-            .set({
-              registrationId: targetReg.id,
-              userId: target.id,
-              updatedAt: new Date(),
-            })
-            .where(eq(payments.id, pay.id));
-          snapshot.movedPaymentIds?.push(pay.id);
-        }
-
-        await tx
-          .update(registrations)
-          .set({
-            status: sourceReg.status,
-            updatedAt: new Date(),
-          })
-          .where(eq(registrations.id, targetReg.id));
-
-        if (
-          sourceReg.status === "pending_payment" ||
-          sourceReg.status === "paid"
-        ) {
-          await tx
-            .update(registrations)
-            .set({
-              status: "cancelled",
-              cancelledBy: "admin",
-              updatedAt: new Date(),
-            })
-            .where(eq(registrations.id, sourceReg.id));
-          snapshot.cancelledRegistrationIds?.push(sourceReg.id);
-        }
-      } else if (
-        sourceReg.status === "pending_payment" ||
-        sourceReg.status === "paid"
-      ) {
-        await tx
-          .update(registrations)
-          .set({
-            status: "cancelled",
-            cancelledBy: "admin",
-            updatedAt: new Date(),
-          })
-          .where(eq(registrations.id, sourceReg.id));
-        snapshot.cancelledRegistrationIds?.push(sourceReg.id);
-      }
+        regScore(sourceReg, payByRegId.get(sourceReg.id)) >
+        regScore(targetReg, payByRegId.get(targetReg.id));
+      const dropped = keepSource ? targetReg : sourceReg;
+      await cancelByMerge(dropped);
+      await moveToTarget(sourceReg);
+      await insertRegistrationEvents(tx, [
+        mergeEvent(sourceReg, !keepSource),
+        ...(keepSource ? [mergeEvent(targetReg, true)] : []),
+      ]);
     }
 
     const sourcePayments = await tx

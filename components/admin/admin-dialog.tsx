@@ -15,6 +15,8 @@ type Props = {
   triggerLabel: ReactNode;
   triggerClassName?: string;
   triggerDisabled?: boolean;
+  /** `menuitem`, когда триггер — пункт меню «…» (`AdminMenu`). */
+  triggerRole?: "menuitem";
   /** Широкая панель для форм с несколькими колонками. */
   wide?: boolean;
   children: (close: () => void) => ReactNode;
@@ -26,6 +28,7 @@ export function AdminDialog({
   triggerLabel,
   triggerClassName = "nl-button",
   triggerDisabled,
+  triggerRole,
   wide,
   children,
 }: Props) {
@@ -57,6 +60,7 @@ export function AdminDialog({
       <button
         type="button"
         className={triggerClassName}
+        role={triggerRole}
         disabled={triggerDisabled}
         onClick={() => setOpen(true)}
       >

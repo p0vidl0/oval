@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { payments, registrations, trainingSessions } from "@/lib/db/schema";
 import { getPaymentProviderId } from "@/lib/payments/config";
+import { resetPaymentForRetry } from "@/lib/payments/reset-payment";
 
 export async function getRegistrationWithSession(registrationId: string) {
   const rows = await db
@@ -41,7 +42,10 @@ export async function ensurePaymentForRegistration(
     return { ok: false as const, error: "Запись не найдена" };
   }
 
-  if (registration.status === "paid") {
+  if (
+    registration.status === "active" &&
+    registration.paymentState === "paid"
+  ) {
     return {
       ok: true as const,
       registration,
@@ -62,7 +66,7 @@ export async function ensurePaymentForRegistration(
     };
   }
 
-  if (registration.status !== "pending_payment") {
+  if (registration.status !== "active" || registration.paymentState !== "due") {
     return { ok: false as const, error: "Запись недоступна для оплаты" };
   }
 
@@ -86,6 +90,13 @@ export async function ensurePaymentForRegistration(
       return { ok: false as const, error: "Не удалось создать платёж" };
     }
     payment = created;
+  } else if (payment.status !== "pending") {
+    // Запись ждёт оплаты, а платёж остался от возврата или переноса
+    // (строки, перезаписанные до частичного unique; см. reset-payment.ts).
+    payment = await resetPaymentForRetry(db, payment, {
+      amountCents: session.priceCents,
+      currency: session.currency,
+    });
   }
 
   return {

@@ -6,7 +6,8 @@ import {
   NlTabIconCabinet,
   NlTabIconFeed,
 } from "@/components/nl/tab-icons";
-import { canAccessAdmin } from "@/lib/auth/roles";
+import { ADMIN_HOME } from "@/lib/admin/routes";
+import { can } from "@/lib/auth/capabilities";
 import { getServerSession } from "@/lib/auth/session";
 import { userHeaderDisplay } from "@/lib/auth/user-display";
 
@@ -19,7 +20,7 @@ export async function NlShell({
 }) {
   const session = await getServerSession();
   const role = session?.user.role as string | undefined;
-  const isAdmin = canAccessAdmin(role);
+  const isAdmin = can(role, "admin.access");
   const { initials, label, isEmail } = userHeaderDisplay({
     name: session?.user.name,
     email: session?.user.email,
@@ -70,7 +71,7 @@ export async function NlShell({
                   </Link>
                 ) : null}
                 {showAdminLink ? (
-                  <Link href="/admin/posts" className="nl-header__nav-link">
+                  <Link href={ADMIN_HOME} className="nl-header__nav-link">
                     Админ
                   </Link>
                 ) : null}
@@ -107,7 +108,7 @@ export async function NlShell({
         </Link>
         {isAdmin ? (
           <Link
-            href="/admin/posts"
+            href={ADMIN_HOME}
             className="nl-tab"
             aria-current={tab === "admin" ? "page" : undefined}
           >

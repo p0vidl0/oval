@@ -150,19 +150,37 @@ export const trainingSessions = pgTable(
   (table) => [index("training_sessions_starts_at_idx").on(table.startsAt)],
 );
 
+/** Участие: `active` держит место, `cancelled` — запись закрыта. */
 export const registrationStatusEnum = pgEnum("registration_status", [
-  "pending_payment",
-  "paid",
+  "active",
   "cancelled",
-  "refunded",
-  "transferred",
 ]);
 
 /** Кто снял запись (для `status = cancelled`). */
 export const registrationCancelSourceEnum = pgEnum(
   "registration_cancel_source",
-  ["user", "admin", "session_cancelled"],
+  ["user", "admin", "session_cancelled", "transferred"],
 );
+
+/** Деньги по записи, независимо от участия (`lib/domain/registration/types.ts`). */
+export const registrationPaymentStateEnum = pgEnum(
+  "registration_payment_state",
+  ["free", "due", "paid", "refunded", "moved"],
+);
+
+/** Посещение: третья ось записи, независимая от участия и денег. */
+export const registrationAttendanceEnum = pgEnum("registration_attendance", [
+  "unknown",
+  "attended",
+  "no_show",
+  "excused",
+]);
+
+/** Кто создал запись: сам участник или тренер («пришёл без записи»). */
+export const registrationSourceEnum = pgEnum("registration_source", [
+  "self",
+  "coach",
+]);
 
 export const registrations = pgTable(
   "registrations",
@@ -174,11 +192,20 @@ export const registrations = pgTable(
     trainingSessionId: text("training_session_id")
       .notNull()
       .references(() => trainingSessions.id, { onDelete: "restrict" }),
-    status: registrationStatusEnum("status")
-      .notNull()
-      .default("pending_payment"),
+    status: registrationStatusEnum("status").notNull().default("active"),
+    paymentState: registrationPaymentStateEnum("payment_state").notNull(),
     cancelledBy: registrationCancelSourceEnum("cancelled_by"),
     transferredFromRegistrationId: text("transferred_from_registration_id"),
+    attendance: registrationAttendanceEnum("attendance")
+      .notNull()
+      .default("unknown"),
+    attendanceMarkedAt: timestamp("attendance_marked_at", {
+      withTimezone: true,
+    }),
+    attendanceMarkedBy: text("attendance_marked_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    source: registrationSourceEnum("source").notNull().default("self"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -190,10 +217,10 @@ export const registrations = pgTable(
   (table) => [
     index("registrations_session_idx").on(table.trainingSessionId),
     index("registrations_user_idx").on(table.userId),
-    uniqueIndex("registrations_user_session_active_uidx").on(
-      table.userId,
-      table.trainingSessionId,
-    ),
+    // Одна активная запись на (user, session); закрытые остаются в истории.
+    uniqueIndex("registrations_user_session_active_uidx")
+      .on(table.userId, table.trainingSessionId)
+      .where(sql`${table.status} = 'active'`),
   ],
 );
 
@@ -202,6 +229,17 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "succeeded",
   "failed",
   "cancelled",
+]);
+
+/**
+ * Способ оплаты: онлайн через провайдера, наличные или перевод тренеру
+ * («Оплачено» в админке), перенос с другой тренировки.
+ */
+export const paymentMethodEnum = pgEnum("payment_method", [
+  "online",
+  "cash",
+  "bank_transfer",
+  "moved",
 ]);
 
 export const payments = pgTable(
@@ -219,6 +257,7 @@ export const payments = pgTable(
     currency: text("currency").notNull().default("RUB"),
     status: paymentStatusEnum("status").notNull().default("pending"),
     provider: text("provider").notNull(),
+    method: paymentMethodEnum("method").notNull().default("online"),
     externalId: text("external_id"),
     metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
     paidAt: timestamp("paid_at", { withTimezone: true }),
@@ -304,6 +343,50 @@ export const trainingSessionEvents = pgTable(
   },
   (table) => [
     index("training_session_events_session_idx").on(
+      table.sessionId,
+      table.createdAt,
+    ),
+  ],
+);
+
+export const registrationEventKindEnum = pgEnum("registration_event_kind", [
+  "created",
+  "cancelled",
+  "payment_succeeded",
+  "refunded",
+  "transferred_out",
+  "transferred_in",
+  "released",
+  "merged",
+  "attendance_marked",
+]);
+
+/** Журнал по записи: кто и когда записал, снял, отметил оплату, вернул деньги. */
+export const registrationEvents = pgTable(
+  "registration_events",
+  {
+    id: text("id").primaryKey(),
+    registrationId: text("registration_id")
+      .notNull()
+      .references(() => registrations.id, { onDelete: "restrict" }),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => trainingSessions.id, { onDelete: "restrict" }),
+    kind: registrationEventKindEnum("kind").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().default({}),
+    actorUserId: text("actor_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("registration_events_registration_idx").on(
+      table.registrationId,
+      table.createdAt,
+    ),
+    index("registration_events_session_idx").on(
       table.sessionId,
       table.createdAt,
     ),

@@ -5,7 +5,12 @@ import {
   publicRosterLabel,
 } from "@/lib/auth/user-display";
 import { db } from "@/lib/db/client";
-import { payments, registrations, user } from "@/lib/db/schema";
+import {
+  payments,
+  registrationEvents,
+  registrations,
+  user,
+} from "@/lib/db/schema";
 import {
   cancelUserRegistration,
   listPublicRoster,
@@ -23,7 +28,7 @@ const run = process.env.OVAL_INTEGRATION === "1" ? describe : describe.skip;
 run("registrations", () => {
   useIntegrationDb();
 
-  it("free session marks registration paid", async () => {
+  it("free session registration is active and free", async () => {
     const userId = await seedUser();
     const { sessionId } = await seedPublishedAnnouncement({ priceCents: 0 });
     const result = await registerUserForSession(userId, sessionId);
@@ -34,7 +39,7 @@ run("registrations", () => {
       .select()
       .from(registrations)
       .where(eq(registrations.id, result.registrationId));
-    expect(rows[0]?.status).toBe("paid");
+    expect(rows[0]).toMatchObject({ status: "active", paymentState: "free" });
   });
 
   it("paid session returns needsPayment", async () => {
@@ -60,7 +65,7 @@ run("registrations", () => {
       .select()
       .from(registrations)
       .where(eq(registrations.id, result.registrationId));
-    expect(rows[0]?.status).toBe("pending_payment");
+    expect(rows[0]).toMatchObject({ status: "active", paymentState: "due" });
 
     const payRows = await db
       .select()
@@ -93,6 +98,40 @@ run("registrations", () => {
       .where(eq(registrations.id, first.registrationId));
     const again = await registerUserForSession(userId, sessionId);
     expect(again.ok).toBe(true);
+    if (!again.ok) return;
+    // Новая строка: отменённая остаётся в истории.
+    expect(again.registrationId).not.toBe(first.registrationId);
+    const rows = await db
+      .select()
+      .from(registrations)
+      .where(eq(registrations.userId, userId));
+    expect(rows.map((r) => r.status).sort()).toEqual(["active", "cancelled"]);
+  });
+
+  it("second active registration is rejected", async () => {
+    const userId = await seedUser("double-active");
+    const { sessionId } = await seedPublishedAnnouncement({ priceCents: 0 });
+    await seedRegistration(userId, sessionId, "free");
+    await expect(seedRegistration(userId, sessionId, "free")).rejects.toThrow();
+    const again = await registerUserForSession(userId, sessionId);
+    expect(again).toEqual({ ok: false, error: "Вы уже записаны" });
+  });
+
+  it("registration and cancellation are journaled with the actor", async () => {
+    const userId = await seedUser("journal-user");
+    const { sessionId } = await seedPublishedAnnouncement({ priceCents: 0 });
+    const result = await registerUserForSession(userId, sessionId);
+    if (!result.ok) throw new Error(result.error);
+    await cancelUserRegistration(result.registrationId, userId, "participant");
+    const events = await db
+      .select()
+      .from(registrationEvents)
+      .where(eq(registrationEvents.registrationId, result.registrationId))
+      .orderBy(registrationEvents.createdAt);
+    expect(events.map((e) => [e.kind, e.actorUserId])).toEqual([
+      ["created", userId],
+      ["cancelled", userId],
+    ]);
   });
 
   it("blocks registration once the training has started", async () => {
@@ -104,25 +143,60 @@ run("registrations", () => {
     expect(result).toEqual({ ok: false, error: "Тренировка уже началась" });
   });
 
-  it("participant cannot cancel a paid registration, admin can", async () => {
+  it("paid registration is closed only via refund or transfer", async () => {
     const userId = await seedUser("paid-cancel-user");
+    const adminId = await seedUser("paid-cancel-admin");
     const { sessionId } = await seedPublishedAnnouncement({
       priceCents: 50000,
     });
     const regId = await seedRegistration(userId, sessionId, "paid");
 
-    const self = await cancelUserRegistration(regId, userId, false);
+    const self = await cancelUserRegistration(regId, userId, "participant");
     expect(self.ok).toBe(false);
 
-    const byAdmin = await cancelUserRegistration(regId, "admin-id", true);
-    expect(byAdmin.ok).toBe(true);
+    // Снятие клубом без возврата потеряло бы деньги — только возврат/перенос.
+    const byAdmin = await cancelUserRegistration(regId, adminId, "staff");
+    expect(byAdmin.ok).toBe(false);
+  });
+
+  it("staff removes an unpaid registration of another user", async () => {
+    const userId = await seedUser("unpaid-remove-user");
+    const adminId = await seedUser("unpaid-remove-admin");
+    const { sessionId } = await seedPublishedAnnouncement({
+      priceCents: 50000,
+      startsAt: new Date(Date.now() - 60_000),
+    });
+    const regId = await seedRegistration(userId, sessionId, "due");
+    const result = await cancelUserRegistration(regId, adminId, "staff");
+    expect(result.ok).toBe(true);
+    const [row] = await db
+      .select()
+      .from(registrations)
+      .where(eq(registrations.id, regId));
+    expect(row).toMatchObject({ status: "cancelled", cancelledBy: "admin" });
+  });
+
+  it("participant rules apply after start and to other users' registrations", async () => {
+    const userId = await seedUser("started-cancel-user");
+    const otherId = await seedUser("other-cancel-user");
+    const { sessionId } = await seedPublishedAnnouncement({
+      priceCents: 0,
+      startsAt: new Date(Date.now() - 60_000),
+    });
+    const regId = await seedRegistration(userId, sessionId, "free");
+
+    const late = await cancelUserRegistration(regId, userId, "participant");
+    expect(late).toEqual({ ok: false, error: "Нельзя отменить после начала" });
+
+    const foreign = await cancelUserRegistration(regId, otherId, "participant");
+    expect(foreign).toEqual({ ok: false, error: "Forbidden" });
   });
 
   it("participant can cancel a free registration", async () => {
     const userId = await seedUser("free-cancel-user");
     const { sessionId } = await seedPublishedAnnouncement({ priceCents: 0 });
-    const regId = await seedRegistration(userId, sessionId, "paid");
-    const result = await cancelUserRegistration(regId, userId, false);
+    const regId = await seedRegistration(userId, sessionId, "free");
+    const result = await cancelUserRegistration(regId, userId, "participant");
     expect(result.ok).toBe(true);
   });
 
@@ -144,11 +218,11 @@ run("registrations", () => {
       .set({ name: "   ", rosterNameVisible: true })
       .where(eq(user.id, emptyNameId));
 
-    await seedRegistration(visibleId, sessionId, "paid");
-    await seedRegistration(hiddenId, sessionId, "paid");
-    await seedRegistration(emptyNameId, sessionId, "paid");
+    await seedRegistration(visibleId, sessionId, "free");
+    await seedRegistration(hiddenId, sessionId, "free");
+    await seedRegistration(emptyNameId, sessionId, "free");
     const cancelledUser = await seedUser("roster-cancelled");
-    await seedRegistration(cancelledUser, sessionId, "cancelled");
+    await seedRegistration(cancelledUser, sessionId, "free", "cancelled");
 
     const roster = await listPublicRoster(sessionId);
     expect(roster).toHaveLength(3);

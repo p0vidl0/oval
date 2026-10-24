@@ -20,4 +20,4 @@ Reference: `components/cabinet/profile-form.tsx`. A pending label alone is enoug
 
 ## Redirect after the action
 
-Admin saves that leave the form use `?done=` / `?error=` and `AdminBanner` (`components/admin/admin-badges.tsx`). Do not replace that with a toast.
+Admin saves that leave the form use `?done=` / `?error=` and `AdminBanner` (`components/admin/admin-badges.tsx`). Do not replace that with a toast. The banner shows once: it strips `done` / `error` / `count` / `post` from the URL via `history.replaceState` (`ClearAdminFlash`), so a reload doesn't repeat it — add new flash params to `ADMIN_FLASH_PARAMS`.

@@ -82,11 +82,9 @@ export async function loadFeedLiveCards(
         timeChange,
         eventDate,
         isLoggedIn: Boolean(session),
-        userRegistration:
-          userReg &&
-          (userReg.status === "paid" || userReg.status === "pending_payment")
-            ? { id: userReg.id, status: userReg.status }
-            : null,
+        userRegistration: userReg
+          ? { id: userReg.id, paymentState: userReg.paymentState }
+          : null,
         announcementPostId: training
           ? announcementBySession.get(training.id)
           : null,

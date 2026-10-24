@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CancelRegistrationForm } from "@/components/nl/cancel-registration-form";
 import { NlFeedPostCard } from "@/components/nl/feed-post-card";
@@ -7,7 +6,11 @@ import { PostRegisterButton } from "@/components/nl/post-register-button";
 import { NlShell } from "@/components/nl/shell";
 import { NlStatus } from "@/components/nl/status";
 import { TrainingRoster } from "@/components/nl/training-roster";
+import { BackLink } from "@/components/nl/ui";
+import { adminSessionHref, canManageSessionFromFeed } from "@/lib/admin/routes";
 import { getServerSession } from "@/lib/auth/session";
+import { describeRegistration } from "@/lib/domain/registration/describe";
+import { PAID_CANCEL_MESSAGE } from "@/lib/domain/registration/types";
 import { changePostUserNote } from "@/lib/feed/feed-live-card";
 import { listImagesForPost } from "@/lib/feed/post-images";
 import {
@@ -32,10 +35,6 @@ import {
   getUserRegistrationForSession,
   listPublicRoster,
 } from "@/lib/training/registrations";
-import {
-  canUserCancelRegistration,
-  PAID_CANCEL_MESSAGE,
-} from "@/lib/training/status";
 import { uploadPublicUrl } from "@/lib/uploads/storage";
 
 type Props = {
@@ -94,6 +93,9 @@ export default async function FeedPostPage({ params, searchParams }: Props) {
 
   const session = await getServerSession();
   const training = await getTrainingSessionForPost(post);
+  const canManage = canManageSessionFromFeed(
+    session?.user.role as string | undefined,
+  );
   const images = await listImagesForPost(post.id);
   const gallery = images.map((img) => ({
     src: uploadPublicUrl(img.storageKey),
@@ -109,8 +111,17 @@ export default async function FeedPostPage({ params, searchParams }: Props) {
     const userReg = session
       ? await getUserRegistrationForSession(session.user.id, training.id)
       : null;
+    const now = new Date();
+    const view = userReg
+      ? describeRegistration({
+          registration: userReg,
+          session: training,
+          viewer: "participant",
+          now,
+        })
+      : null;
     const gate = isRegistrationOpen({
-      now: new Date(),
+      now,
       sessionStatus: training.status,
       startsAt: training.startsAt,
       registrationEnabled: training.registrationEnabled,
@@ -130,21 +141,15 @@ export default async function FeedPostPage({ params, searchParams }: Props) {
         />
       ) : null;
 
-    const canCancel =
-      userReg !== null &&
-      training.startsAt > new Date() &&
-      canUserCancelRegistration(userReg, training);
-    const cancelForm = canCancel ? (
-      <CancelRegistrationForm
-        registrationId={userReg.id}
-        returnTo={`/feed/${post.id}`}
-      />
-    ) : null;
+    const cancelForm =
+      userReg && view?.actions.cancel ? (
+        <CancelRegistrationForm
+          registrationId={userReg.id}
+          returnTo={`/feed/${post.id}`}
+        />
+      ) : null;
 
-    const showPay =
-      userReg?.status === "pending_payment" &&
-      training.priceCents > 0 &&
-      training.onlinePaymentEnabled;
+    const showPay = view?.actions.payOnline === true;
 
     cardExtra = (
       <>
@@ -166,9 +171,7 @@ export default async function FeedPostPage({ params, searchParams }: Props) {
         {!userReg && !gate.open ? (
           <p className="caption">{REGISTRATION_BLOCK_MESSAGES[gate.reason]}</p>
         ) : null}
-        {userReg?.status === "pending_payment" &&
-        training.priceCents > 0 &&
-        training.onlinePaymentEnabled ? (
+        {showPay ? (
           <>
             <p
               className="caption"
@@ -182,21 +185,20 @@ export default async function FeedPostPage({ params, searchParams }: Props) {
             </p>
           </>
         ) : null}
-        {userReg?.status === "paid" ? (
+        {userReg?.paymentState === "paid" ? (
           <NlStatus paid>
-            {training.priceCents > 0
-              ? `Оплачено. Ждём вас ${formatWeekdayInPhrase(training.startsAt)} в ${formatTimeHm(training.startsAt)}.`
-              : "Вы записаны."}
+            {`Оплачено. Ждём вас ${formatWeekdayInPhrase(training.startsAt)} в ${formatTimeHm(training.startsAt)}.`}
           </NlStatus>
         ) : null}
-        {userReg && !canUserCancelRegistration(userReg, training) ? (
+        {userReg?.paymentState === "free" ? (
+          <NlStatus paid>Вы записаны.</NlStatus>
+        ) : null}
+        {userReg?.paymentState === "paid" ? (
           <p className="caption" style={{ color: "var(--ink-muted)" }}>
             {PAID_CANCEL_MESSAGE}
           </p>
         ) : null}
-        {userReg?.status === "pending_payment" &&
-        training.priceCents > 0 &&
-        !training.onlinePaymentEnabled ? (
+        {view?.actions.payOnSite ? (
           <p className="caption">Оплата на месте.</p>
         ) : null}
       </>
@@ -205,13 +207,7 @@ export default async function FeedPostPage({ params, searchParams }: Props) {
     return (
       <NlShell tab="feed">
         <main className="nl-page">
-          <Link
-            href="/feed"
-            className="caption"
-            style={{ color: "var(--ink-muted)" }}
-          >
-            ← Лента
-          </Link>
+          <BackLink href="/feed">Лента</BackLink>
           <div className="nl-feed-layout nl-post-single">
             <div className="nl-feed-main">
               <NlFeedPostCard
@@ -244,9 +240,15 @@ export default async function FeedPostPage({ params, searchParams }: Props) {
                     gate.open && !session
                       ? `/login?next=/feed/${post.id}`
                       : undefined,
-                  payHref: showPay ? `/cabinet/pay/${userReg.id}` : undefined,
+                  payHref:
+                    showPay && userReg
+                      ? `/cabinet/pay/${userReg.id}`
+                      : undefined,
                   payLabel: `Оплатить · ${formatPriceRub(training.priceCents, training.currency)}`,
                   cancelForm,
+                  manageHref: canManage
+                    ? adminSessionHref(training.id)
+                    : undefined,
                 }}
               />
               {cardExtra}
@@ -296,13 +298,7 @@ export default async function FeedPostPage({ params, searchParams }: Props) {
   return (
     <NlShell tab="feed">
       <main className="nl-page">
-        <Link
-          href="/feed"
-          className="caption"
-          style={{ color: "var(--ink-muted)" }}
-        >
-          ← Лента
-        </Link>
+        <BackLink href="/feed">Лента</BackLink>
         <div className="nl-feed-layout nl-post-single">
           <div className="nl-feed-main">
             <NlFeedPostCard
@@ -324,6 +320,10 @@ export default async function FeedPostPage({ params, searchParams }: Props) {
                 trainingHref: announcementId
                   ? `/feed/${announcementId}`
                   : undefined,
+                manageHref:
+                  canManage && training
+                    ? adminSessionHref(training.id)
+                    : undefined,
               }}
             />
           </div>

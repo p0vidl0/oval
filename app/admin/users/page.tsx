@@ -3,9 +3,11 @@ import { Pagination } from "@/components/admin/pagination";
 import { UserMergeLoginDetails } from "@/components/admin/user-merge-login-details";
 import { AdminUserRolePicker } from "@/components/admin/user-role-picker";
 import { parsePageRequest } from "@/lib/admin/pagination";
+import { ADMIN_HOME } from "@/lib/admin/routes";
 import { searchUsersForAdminPaged } from "@/lib/admin/user-queries";
+import { can } from "@/lib/auth/capabilities";
 import { roleLabel } from "@/lib/auth/role-labels";
-import { isSuperAdmin, parseRole } from "@/lib/auth/roles";
+import { parseRole } from "@/lib/auth/roles";
 import { getServerSession } from "@/lib/auth/session";
 
 type SearchParams = { q?: string; page?: string; size?: string };
@@ -16,8 +18,11 @@ type Props = { searchParams: Promise<SearchParams> };
 
 export default async function AdminUsersPage({ searchParams }: Props) {
   const session = await getServerSession();
-  if (!session || !isSuperAdmin(session.user.role as string | undefined)) {
-    redirect("/admin/sessions");
+  if (
+    !session ||
+    !can(session.user.role as string | undefined, "users.manageRoles")
+  ) {
+    redirect(ADMIN_HOME);
   }
 
   const params = await searchParams;
@@ -75,9 +80,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                     <tr key={u.id}>
                       <td>
                         {u.name?.trim() || (
-                          <span style={{ color: "var(--ink-muted)" }}>
-                            без имени
-                          </span>
+                          <span className="nl-muted">без имени</span>
                         )}
                       </td>
                       <td>

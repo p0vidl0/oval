@@ -8,7 +8,7 @@ import {
   PublicationError,
   readPublishToTelegram,
 } from "@/lib/admin/publication-form";
-import { requireEditor } from "@/lib/admin/require-editor";
+import { requireCapability } from "@/lib/admin/require-capability";
 import { appendImagesFromForm } from "@/lib/admin/save-post-images";
 import {
   readChangePostFromForm,
@@ -16,12 +16,12 @@ import {
   readRequiredScheduleFromForm,
   readTrainingSettingsFromForm,
 } from "@/lib/admin/training-form";
+import { applyRegistrationEffects } from "@/lib/app/effects";
 import { maxImagesForPostType } from "@/lib/feed/post-image-limits";
 import { isPostLive } from "@/lib/feed/publication";
 import { scheduleSocialPublishAfter } from "@/lib/feed/social-publish";
 import { ensureSocialPublishJobs } from "@/lib/feed/social-publish-jobs";
 import { publishFeedEvent } from "@/lib/realtime/feed-event-bus";
-import { publishSessionRegistrationsChanged } from "@/lib/realtime/publish-session-registrations-changed";
 import {
   cancelTrainingSession,
   createTrainingSession,
@@ -68,7 +68,7 @@ function revalidateTraining(sessionId: string) {
 }
 
 export async function createTrainingAction(formData: FormData) {
-  const session = await requireEditor();
+  const session = await requireCapability("sessions.manage");
   const withAnnouncement = formData.get("create_announcement") === "on";
 
   await runThenRedirect(
@@ -115,7 +115,7 @@ export async function createTrainingAction(formData: FormData) {
 }
 
 export async function updateTrainingSettingsAction(formData: FormData) {
-  const session = await requireEditor();
+  const session = await requireCapability("sessions.manage");
   const sessionId = String(formData.get("session_id") ?? "");
 
   await runThenRedirect(
@@ -135,7 +135,7 @@ export async function updateTrainingSettingsAction(formData: FormData) {
 }
 
 export async function rescheduleTrainingAction(formData: FormData) {
-  const session = await requireEditor();
+  const session = await requireCapability("sessions.manage");
   const sessionId = String(formData.get("session_id") ?? "");
 
   await runThenRedirect(
@@ -162,7 +162,7 @@ export async function rescheduleTrainingAction(formData: FormData) {
 }
 
 export async function cancelTrainingAction(formData: FormData) {
-  const session = await requireEditor();
+  const session = await requireCapability("sessions.manage");
   const sessionId = String(formData.get("session_id") ?? "");
 
   await runThenRedirect(
@@ -179,7 +179,7 @@ export async function cancelTrainingAction(formData: FormData) {
         emitFeedPostLive(postId, post.mode === "publish", false);
       }
       publishFeedEvent({ type: "session.changed", sessionId });
-      await publishSessionRegistrationsChanged(sessionId);
+      await applyRegistrationEffects([sessionId]);
       return sessionUrl(sessionId, {
         filter: "paid",
         done: "cancelled",
@@ -191,7 +191,7 @@ export async function cancelTrainingAction(formData: FormData) {
 }
 
 export async function refundAllPaidAction(formData: FormData) {
-  const session = await requireEditor();
+  const session = await requireCapability("payments.refund");
   const sessionId = String(formData.get("session_id") ?? "");
 
   await runThenRedirect(
@@ -201,6 +201,7 @@ export async function refundAllPaidAction(formData: FormData) {
         actorUserId: session.user.id,
       });
       revalidateTraining(sessionId);
+      await applyRegistrationEffects([sessionId]);
       return sessionUrl(sessionId, {
         filter: "closed",
         done: "refunded",
@@ -212,16 +213,20 @@ export async function refundAllPaidAction(formData: FormData) {
 }
 
 export async function transferAllPaidAction(formData: FormData) {
-  await requireEditor();
+  const session = await requireCapability("payments.refund");
   const sessionId = String(formData.get("session_id") ?? "");
   const targetSessionId = String(formData.get("target_session_id") ?? "");
 
   await runThenRedirect(
     async () => {
-      const { count } = await transferAllPaid({ sessionId, targetSessionId });
+      const { count } = await transferAllPaid({
+        sessionId,
+        targetSessionId,
+        actorUserId: session.user.id,
+      });
       revalidateTraining(sessionId);
       revalidateTraining(targetSessionId);
-      await publishSessionRegistrationsChanged(targetSessionId);
+      await applyRegistrationEffects([sessionId, targetSessionId]);
       return sessionUrl(sessionId, {
         filter: "closed",
         done: "transferred",

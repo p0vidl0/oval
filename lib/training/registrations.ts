@@ -1,20 +1,19 @@
-import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { publicRosterLabel } from "@/lib/auth/user-display";
 import { db } from "@/lib/db/client";
 import { feedPosts, registrations, trainingSessions } from "@/lib/db/schema";
 import { user } from "@/lib/db/schema/auth-schema";
+import { describeRegistration } from "@/lib/domain/registration/describe";
+import { insertRegistrationEvents } from "@/lib/domain/registration/events";
+import {
+  initialPaymentState,
+  PAID_CANCEL_MESSAGE,
+} from "@/lib/domain/registration/types";
 import { livePostCondition } from "@/lib/feed/publication";
 import {
   isRegistrationOpen,
   REGISTRATION_BLOCK_MESSAGES,
 } from "@/lib/training/registration-rules";
-import {
-  ACTIVE_REGISTRATION_STATUSES as ACTIVE_STATUSES,
-  canUserCancelRegistration,
-  isActiveRegistrationStatus,
-  isClosedRegistrationStatus,
-  PAID_CANCEL_MESSAGE,
-} from "@/lib/training/status";
 
 /** Анонс тренировки, видимый в ленте, — для ссылки «в ленту». */
 function publishedAnnouncementJoin() {
@@ -37,7 +36,7 @@ export async function listPublicRoster(sessionId: string) {
     .where(
       and(
         eq(registrations.trainingSessionId, sessionId),
-        inArray(registrations.status, [...ACTIVE_STATUSES]),
+        eq(registrations.status, "active"),
         isNull(user.deletedAt),
       ),
     )
@@ -59,7 +58,7 @@ export async function countActiveRegistrations(sessionId: string) {
     .where(
       and(
         eq(registrations.trainingSessionId, sessionId),
-        inArray(registrations.status, [...ACTIVE_STATUSES]),
+        eq(registrations.status, "active"),
       ),
     );
   return rows[0]?.count ?? 0;
@@ -76,14 +75,17 @@ export async function getUserRegistrationForSession(
       and(
         eq(registrations.userId, userId),
         eq(registrations.trainingSessionId, sessionId),
+        eq(registrations.status, "active"),
       ),
-    );
-  const reg = rows[0];
-  if (!reg || !isActiveRegistrationStatus(reg.status)) return null;
-  return reg;
+    )
+    .limit(1);
+  return rows[0] ?? null;
 }
 
-/** Запись пользователя на тренировку в любом статусе (для пометок «снята», «возврат»). */
+/**
+ * Запись пользователя на тренировку в любом статусе (для пометок «снята», «возврат»):
+ * активная, иначе последняя закрытая.
+ */
 export async function getUserRegistrationAnyStatus(
   userId: string,
   sessionId: string,
@@ -96,7 +98,12 @@ export async function getUserRegistrationAnyStatus(
         eq(registrations.userId, userId),
         eq(registrations.trainingSessionId, sessionId),
       ),
-    );
+    )
+    .orderBy(
+      sql`${registrations.status} = 'active' desc`,
+      desc(registrations.createdAt),
+    )
+    .limit(1);
   return rows[0] ?? null;
 }
 
@@ -114,10 +121,7 @@ export async function listUserRegistrations(userId: string) {
     )
     .leftJoin(feedPosts, publishedAnnouncementJoin())
     .where(
-      and(
-        eq(registrations.userId, userId),
-        inArray(registrations.status, [...ACTIVE_STATUSES]),
-      ),
+      and(eq(registrations.userId, userId), eq(registrations.status, "active")),
     )
     .orderBy(trainingSessions.startsAt);
 }
@@ -132,12 +136,22 @@ async function countActiveRegistrationsInTx(
     .where(
       and(
         eq(registrations.trainingSessionId, sessionId),
-        inArray(registrations.status, [...ACTIVE_STATUSES]),
+        eq(registrations.status, "active"),
       ),
     );
   return rows[0]?.count ?? 0;
 }
 
+/** Нарушение частичного unique «одна активная запись на (user, session)». */
+function isUniqueViolation(error: unknown): boolean {
+  const e = error as { code?: string; cause?: { code?: string } } | null;
+  return e?.code === "23505" || e?.cause?.code === "23505";
+}
+
+/**
+ * Каждая запись — новая строка: отменённые и закрытые остаются в истории
+ * (частичный unique `registrations_user_session_active_uidx`).
+ */
 export async function registerUserForSession(
   userId: string,
   sessionId: string,
@@ -155,18 +169,17 @@ export async function registerUserForSession(
       }
 
       const activeCount = await countActiveRegistrationsInTx(tx, sessionId);
-      const existing = await tx
-        .select()
+      const active = await tx
+        .select({ id: registrations.id })
         .from(registrations)
         .where(
           and(
             eq(registrations.userId, userId),
             eq(registrations.trainingSessionId, sessionId),
+            eq(registrations.status, "active"),
           ),
-        );
-      const hasActive =
-        existing[0] !== undefined &&
-        isActiveRegistrationStatus(existing[0].status);
+        )
+        .limit(1);
 
       const gate = isRegistrationOpen({
         now: new Date(),
@@ -177,7 +190,7 @@ export async function registerUserForSession(
         registrationClosesAt: s.registrationClosesAt,
         activeCount,
         capacity: s.capacity,
-        userHasActiveRegistration: hasActive,
+        userHasActiveRegistration: active.length > 0,
       });
 
       if (!gate.open) {
@@ -187,38 +200,27 @@ export async function registerUserForSession(
         };
       }
 
-      const isFree = s.priceCents <= 0;
-      // Оплата на месте: запись pending_payment до «Оплачено» в админке.
-      const initialStatus = isFree
-        ? ("paid" as const)
-        : ("pending_payment" as const);
-      const needsPayment = !isFree && s.onlinePaymentEnabled;
-
-      if (existing[0] && isClosedRegistrationStatus(existing[0].status)) {
-        await tx
-          .update(registrations)
-          .set({
-            status: initialStatus,
-            cancelledBy: null,
-            transferredFromRegistrationId: null,
-            updatedAt: new Date(),
-          })
-          .where(eq(registrations.id, existing[0].id));
-        return {
-          ok: true as const,
-          registrationId: existing[0].id,
-          needsPayment,
-          sessionId,
-        };
-      }
+      // Оплата на месте: запись ждёт оплаты до «Оплачено» в админке.
+      const paymentState = initialPaymentState(s.priceCents);
+      const needsPayment = paymentState === "due" && s.onlinePaymentEnabled;
 
       const id = crypto.randomUUID();
       await tx.insert(registrations).values({
         id,
         userId,
         trainingSessionId: sessionId,
-        status: initialStatus,
+        status: "active",
+        paymentState,
       });
+      await insertRegistrationEvents(tx, [
+        {
+          registrationId: id,
+          sessionId,
+          kind: "created",
+          payload: { paymentState },
+          actorUserId: userId,
+        },
+      ]);
 
       return {
         ok: true as const,
@@ -227,8 +229,11 @@ export async function registerUserForSession(
         sessionId,
       };
     });
-  } catch {
-    return { ok: false as const, error: "Вы уже записаны" };
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return { ok: false as const, error: "Вы уже записаны" };
+    }
+    throw error;
   }
 }
 
@@ -246,7 +251,7 @@ export async function listUserRegistrationHistory(userId: string) {
     )
     .leftJoin(feedPosts, publishedAnnouncementJoin())
     .where(eq(registrations.userId, userId))
-    .orderBy(trainingSessions.startsAt);
+    .orderBy(trainingSessions.startsAt, registrations.createdAt);
 }
 
 /** Куда перенесли оплату с исходной записи (если есть). */
@@ -282,47 +287,94 @@ export async function getTransferTargetsBySourceRegistrationIds(
   return map;
 }
 
+/**
+ * `participant` — правила участника (своя запись, до старта, без оплаты);
+ * `staff` — снятие клубом из админки. Правила — `describeRegistration`.
+ */
+export type CancelActor = "participant" | "staff";
+
 export async function cancelUserRegistration(
   registrationId: string,
   userId: string,
-  isAdmin: boolean,
+  actor: CancelActor,
 ) {
+  return db.transaction(async (tx) => {
+    const rows = await tx
+      .select({
+        registration: registrations,
+        session: trainingSessions,
+      })
+      .from(registrations)
+      .innerJoin(
+        trainingSessions,
+        eq(registrations.trainingSessionId, trainingSessions.id),
+      )
+      .where(eq(registrations.id, registrationId))
+      .limit(1)
+      .for("update", { of: registrations });
+    const row = rows[0];
+    if (!row) return { ok: false as const, error: "Запись не найдена" };
+    const own = row.registration.userId === userId;
+    if (!own && actor !== "staff") {
+      return { ok: false as const, error: "Forbidden" };
+    }
+    if (row.registration.status !== "active") {
+      return { ok: false as const, error: "Запись уже отменена" };
+    }
+    const now = new Date();
+    const view = describeRegistration({
+      registration: row.registration,
+      session: row.session,
+      viewer: actor,
+      now,
+    });
+    if (!view.actions.cancel) {
+      // Деньги возвращает или переносит тренер (раздел «Оплата» в админке).
+      if (row.registration.paymentState === "paid") {
+        return { ok: false as const, error: PAID_CANCEL_MESSAGE };
+      }
+      return { ok: false as const, error: "Нельзя отменить после начала" };
+    }
+    const cancelledBy = own ? ("user" as const) : ("admin" as const);
+    await tx
+      .update(registrations)
+      .set({ status: "cancelled", cancelledBy, updatedAt: now })
+      .where(eq(registrations.id, registrationId));
+    await insertRegistrationEvents(tx, [
+      {
+        registrationId,
+        sessionId: row.session.id,
+        kind: "cancelled",
+        payload: { cancelledBy, actor },
+        actorUserId: userId,
+      },
+    ]);
+    return {
+      ok: true as const,
+      sessionId: row.session.id,
+    };
+  });
+}
+
+/** Сколько тренировок участник посетил за календарный год (для кабинета). */
+export async function countUserAttendance(userId: string, year: number) {
+  const from = new Date(Date.UTC(year, 0, 1));
+  const to = new Date(Date.UTC(year + 1, 0, 1));
   const rows = await db
-    .select({
-      registration: registrations,
-      session: trainingSessions,
-    })
+    .select({ count: sql<number>`count(*)::int` })
     .from(registrations)
     .innerJoin(
       trainingSessions,
       eq(registrations.trainingSessionId, trainingSessions.id),
     )
-    .where(eq(registrations.id, registrationId))
-    .limit(1);
-  const row = rows[0];
-  if (!row) return { ok: false as const, error: "Запись не найдена" };
-  if (row.registration.userId !== userId && !isAdmin) {
-    return { ok: false as const, error: "Forbidden" };
-  }
-  if (!isActiveRegistrationStatus(row.registration.status)) {
-    return { ok: false as const, error: "Запись уже отменена" };
-  }
-  const now = new Date();
-  if (!isAdmin && now >= row.session.startsAt) {
-    return { ok: false as const, error: "Нельзя отменить после начала" };
-  }
-  // Деньги возвращает или переносит тренер (раздел «Оплата» в админке).
-  if (!isAdmin && !canUserCancelRegistration(row.registration, row.session)) {
-    return { ok: false as const, error: PAID_CANCEL_MESSAGE };
-  }
-  const cancelledBy =
-    row.registration.userId === userId ? ("user" as const) : ("admin" as const);
-  await db
-    .update(registrations)
-    .set({ status: "cancelled", cancelledBy, updatedAt: now })
-    .where(eq(registrations.id, registrationId));
-  return {
-    ok: true as const,
-    sessionId: row.session.id,
-  };
+    .where(
+      and(
+        eq(registrations.userId, userId),
+        eq(registrations.status, "active"),
+        eq(registrations.attendance, "attended"),
+        sql`${trainingSessions.startsAt} >= ${from.toISOString()}::timestamptz`,
+        sql`${trainingSessions.startsAt} < ${to.toISOString()}::timestamptz`,
+      ),
+    );
+  return rows[0]?.count ?? 0;
 }

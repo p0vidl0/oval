@@ -1,4 +1,9 @@
 import type { feedPosts, trainingSessions } from "@/lib/db/schema";
+import type {
+  CancelSource,
+  PaymentState,
+  RegistrationStatus,
+} from "@/lib/domain/registration/types";
 import type { FeedPostMeta, FeedPostType } from "@/lib/feed/types";
 import { formatPriceRub, formatTimeHm } from "@/lib/format/datetime";
 import { isRegistrationOpen } from "@/lib/training/registration-rules";
@@ -55,39 +60,36 @@ export type FeedLiveCard = {
 
 export type FeedUserRegistration = {
   id: string;
-  status: "pending_payment" | "paid";
+  paymentState: PaymentState;
 };
 
 /** Пометка на карточке переноса/отмены для того, кто записан на тренировку. */
 export function changePostUserNote(
   postType: FeedPostType,
   registration: {
-    status: string;
-    cancelledBy: string | null;
+    status: RegistrationStatus;
+    paymentState: PaymentState;
+    cancelledBy: CancelSource | null;
   } | null,
 ): string | undefined {
   if (!registration) return undefined;
+  const active = registration.status === "active";
   if (postType === "training_rescheduled") {
-    return registration.status === "paid" ||
-      registration.status === "pending_payment"
-      ? "Ваша запись сохранена"
-      : undefined;
+    return active ? "Ваша запись сохранена" : undefined;
   }
   if (postType !== "training_cancelled") return undefined;
-  switch (registration.status) {
-    case "paid":
-      return "Вы оплатили — тренер оформит возврат или перенос";
-    case "refunded":
-      return "Возврат оформлен";
-    case "transferred":
-      return "Оплата перенесена на другую тренировку";
-    case "cancelled":
-      return registration.cancelledBy === "session_cancelled"
-        ? "Ваша запись снята"
-        : undefined;
-    default:
-      return undefined;
+  if (active) {
+    return registration.paymentState === "paid"
+      ? "Вы оплатили — тренер оформит возврат или перенос"
+      : undefined;
   }
+  if (registration.paymentState === "refunded") return "Возврат оформлен";
+  if (registration.paymentState === "moved") {
+    return "Оплата перенесена на другую тренировку";
+  }
+  return registration.cancelledBy === "session_cancelled"
+    ? "Ваша запись снята"
+    : undefined;
 }
 
 export function formatTimeChangeFromMeta(
@@ -145,16 +147,9 @@ export function buildFeedLiveCard(params: {
       : null;
   const canRegister = Boolean(gate?.open);
 
-  const showPay =
-    userRegistration?.status === "pending_payment" &&
-    training &&
-    training.priceCents > 0 &&
-    training.onlinePaymentEnabled;
-  const onsitePay =
-    userRegistration?.status === "pending_payment" &&
-    training &&
-    training.priceCents > 0 &&
-    !training.onlinePaymentEnabled;
+  const due = userRegistration?.paymentState === "due";
+  const showPay = due && training && training.onlinePaymentEnabled;
+  const onsitePay = due && training && !training.onlinePaymentEnabled;
 
   return {
     postId: post.id,

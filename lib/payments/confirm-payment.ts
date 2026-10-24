@@ -6,6 +6,7 @@ import {
   paymentWebhookDeliveries,
   registrations,
 } from "@/lib/db/schema";
+import { insertRegistrationEvents } from "@/lib/domain/registration/events";
 import { publishSessionRegistrationsChanged } from "@/lib/realtime/publish-session-registrations-changed";
 
 export type ConfirmPaymentResult =
@@ -21,6 +22,11 @@ export async function confirmPaymentSucceeded(params: {
   externalId?: string;
   webhookDeliveryId?: string;
   webhookPayload?: Record<string, unknown>;
+  /** Кто подтвердил: webhook провайдера или админ («Оплачено на месте», mock). */
+  source?: "webhook" | "admin_onsite" | "admin_mock";
+  actorUserId?: string | null;
+  /** Способ оплаты; без него остаётся тот, с которым создан платёж. */
+  method?: "online" | "cash" | "bank_transfer";
 }): Promise<ConfirmPaymentResult> {
   if (params.webhookDeliveryId) {
     const deliveryKey = `${params.provider}:${params.webhookDeliveryId}`;
@@ -76,20 +82,39 @@ export async function confirmPaymentSucceeded(params: {
       .set({
         status: "succeeded",
         paidAt: now,
+        ...(params.method ? { method: params.method } : {}),
         externalId: params.externalId ?? payment.externalId,
         updatedAt: now,
       })
       .where(eq(payments.id, payment.id));
 
-    await tx
+    const updated = await tx
       .update(registrations)
-      .set({ status: "paid", updatedAt: now })
+      .set({ paymentState: "paid", updatedAt: now })
       .where(
         and(
           eq(registrations.id, payment.registrationId),
-          eq(registrations.status, "pending_payment"),
+          eq(registrations.status, "active"),
+          eq(registrations.paymentState, "due"),
         ),
-      );
+      )
+      .returning({ sessionId: registrations.trainingSessionId });
+    if (updated[0]) {
+      await insertRegistrationEvents(tx, [
+        {
+          registrationId: payment.registrationId,
+          sessionId: updated[0].sessionId,
+          kind: "payment_succeeded",
+          payload: {
+            paymentId: payment.id,
+            amountCents: payment.amountCents,
+            source: params.source ?? "webhook",
+            method: params.method ?? payment.method,
+          },
+          actorUserId: params.actorUserId ?? null,
+        },
+      ]);
+    }
   });
 
   const regRows = await db

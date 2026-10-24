@@ -21,6 +21,11 @@ export type FeedRealtimeEvent =
   | {
       type: "session.changed";
       sessionId: string;
+    }
+  | {
+      /** Отметки посещения: обновить список тренера (лента не слушает). */
+      type: "session.attendance_changed";
+      sessionId: string;
     };
 
 const GLOBAL_KEY = "__ovalFeedEventBus";

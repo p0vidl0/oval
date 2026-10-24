@@ -1,24 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { canAccessAdmin, isAdmin } from "@/lib/auth/roles";
-import { getServerSession } from "@/lib/auth/session";
+import { requireCapability } from "@/lib/admin/require-capability";
+import { applyRegistrationEffects } from "@/lib/app/effects";
 import { markRegistrationPaid } from "@/lib/payments/mark-paid";
 
-async function requireEditor() {
-  const session = await getServerSession();
-  if (!session || !canAccessAdmin(session.user.role as string | undefined)) {
-    throw new Error("Forbidden");
-  }
-  return session;
-}
-
-/** Dev/mock: только admin подтверждает оплату вручную. */
+/** Dev/mock: ручное подтверждение оплаты. */
 export async function adminConfirmPaymentForm(formData: FormData) {
-  const session = await requireEditor();
-  if (!isAdmin(session.user.role as string | undefined)) {
-    throw new Error("Только admin может подтверждать mock-оплату");
-  }
+  const session = await requireCapability("payments.confirmMock");
 
   const registrationId = String(formData.get("registration_id") ?? "");
   const result = await markRegistrationPaid({
@@ -30,8 +18,6 @@ export async function adminConfirmPaymentForm(formData: FormData) {
     throw new Error(result.error);
   }
 
-  revalidatePath("/admin/registrations");
-  revalidatePath("/admin/payments");
-  revalidatePath("/cabinet");
-  revalidatePath("/feed");
+  // SSE уже отправил confirmPaymentSucceeded.
+  await applyRegistrationEffects([], { realtime: false });
 }

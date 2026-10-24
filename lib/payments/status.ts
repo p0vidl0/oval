@@ -14,3 +14,12 @@ export function paymentStatusLabel(payment: {
       return payment.metadata?.refundedAt ? "Возврат" : "Отменён";
   }
 }
+
+/** Пометка способа рядом с суммой: «· наличными», «· переводом». */
+export function paymentMethodSuffix(
+  method: "online" | "cash" | "bank_transfer" | "moved" | null | undefined,
+): string {
+  if (method === "cash") return " · наличными";
+  if (method === "bank_transfer") return " · переводом";
+  return "";
+}

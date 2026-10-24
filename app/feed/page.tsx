@@ -7,7 +7,9 @@ import {
   type UpcomingItem,
   UpcomingStrip,
 } from "@/components/nl/upcoming-strip";
+import { canManageSessionFromFeed } from "@/lib/admin/routes";
 import { getServerSession } from "@/lib/auth/session";
+import { describeRegistration } from "@/lib/domain/registration/describe";
 import { FEED_FILTERS, type FeedFilterKey } from "@/lib/feed/filter";
 import { loadFeedLiveCards } from "@/lib/feed/load-feed-live-cards";
 import { listUpcomingScheduledSessions } from "@/lib/feed/queries";
@@ -34,14 +36,18 @@ type Props = {
   searchParams: Promise<{ filter?: string }>;
 };
 
+type MyRegistration = Awaited<ReturnType<typeof listUserRegistrations>>[number];
+
 function registrationStatusText(
-  registration: { status: string },
-  training: { priceCents: number; onlinePaymentEnabled: boolean },
+  registration: MyRegistration["registration"],
+  training: MyRegistration["session"],
 ) {
-  if (registration.status === "paid") {
-    return training.priceCents > 0 ? "Оплачено" : "Вы записаны";
-  }
-  return training.onlinePaymentEnabled ? "Ждёт оплаты" : "Оплата на месте";
+  return describeRegistration({
+    registration,
+    session: training,
+    viewer: "participant",
+    now: new Date(),
+  }).label;
 }
 
 /** Ближайшие тренировки + свои записи (даже если их нет в первых шести). */
@@ -134,6 +140,9 @@ export default async function FeedPage({ searchParams }: Props) {
               filter={filter}
               isLoggedIn={Boolean(session)}
               needsName={Boolean(session) && !session?.user.name?.trim()}
+              canManage={canManageSessionFromFeed(
+                session?.user.role as string | undefined,
+              )}
             />
           </div>
 
@@ -191,13 +200,7 @@ export default async function FeedPage({ searchParams }: Props) {
                                 fontSize: 13,
                               }}
                             >
-                              {registration.status === "paid"
-                                ? tr.priceCents > 0
-                                  ? "Оплачено"
-                                  : "Вы записаны"
-                                : tr.onlinePaymentEnabled
-                                  ? "Ждёт оплаты"
-                                  : "Оплата на месте"}
+                              {registrationStatusText(registration, tr)}
                             </span>
                           </Link>
                         </li>

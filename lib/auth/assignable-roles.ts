@@ -1,4 +1,4 @@
-export const ASSIGNABLE_ROLES = ["user", "editor", "admin"] as const;
+export const ASSIGNABLE_ROLES = ["user", "admin"] as const;
 export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
 
 export function isAssignableRole(role: string): role is AssignableRole {

@@ -103,14 +103,23 @@ export function RescheduleDialog({
   defaults,
   consequences,
   action,
+  inMenu,
 }: {
   sessionId: string;
   defaults: { date: string; gather: string; start: string; end: string };
   consequences: SessionConsequences;
   action: Action;
+  /** Пункт меню «…» (`AdminMenu`). */
+  inMenu?: boolean;
 }) {
   return (
-    <AdminDialog title="Перенос тренировки" triggerLabel="Перенести…" wide>
+    <AdminDialog
+      title="Перенос тренировки"
+      triggerLabel="Перенести…"
+      triggerClassName={inMenu ? "" : undefined}
+      triggerRole={inMenu ? "menuitem" : undefined}
+      wide
+    >
       {(close) => (
         <form action={action} className="nl-dialog__body">
           <input type="hidden" name="session_id" value={sessionId} />
@@ -185,17 +194,23 @@ export function CancelSessionDialog({
   defaultBody,
   consequences,
   action,
+  triggerClassName = "nl-button nl-button--danger",
+  inMenu,
 }: {
   sessionId: string;
   defaultBody: string;
   consequences: SessionConsequences;
   action: Action;
+  triggerClassName?: string;
+  /** Пункт меню «…» (`AdminMenu`). */
+  inMenu?: boolean;
 }) {
   return (
     <AdminDialog
       title="Отмена тренировки"
-      triggerLabel="Отменить…"
-      triggerClassName="nl-button nl-button--danger"
+      triggerLabel="Отменить тренировку…"
+      triggerClassName={triggerClassName}
+      triggerRole={inMenu ? "menuitem" : undefined}
       wide
     >
       {(close) => (

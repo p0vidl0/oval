@@ -6,6 +6,7 @@ import {
 import { ClickableRow } from "@/components/admin/clickable-row";
 import { Pagination } from "@/components/admin/pagination";
 import { FilterNav } from "@/components/nl/filter-nav";
+import { PageHeader } from "@/components/nl/ui";
 import { parsePageRequest } from "@/lib/admin/pagination";
 import {
   formatPriceRub,
@@ -46,15 +47,17 @@ export default async function AdminSessionsPage({ searchParams }: Props) {
 
   return (
     <main>
-      <div className="nl-admin-head">
-        <h1 className="nl-page-title nl-page-title--admin">Тренировки</h1>
-        <Link
-          href="/admin/sessions/new"
-          className="nl-button nl-button--primary"
-        >
-          Добавить тренировку
-        </Link>
-      </div>
+      <PageHeader
+        title="Расписание"
+        actions={
+          <Link
+            href="/admin/sessions/new"
+            className="nl-button nl-button--primary"
+          >
+            Добавить тренировку
+          </Link>
+        }
+      />
 
       <FilterNav
         label="Период"
@@ -143,7 +146,7 @@ export default async function AdminSessionsPage({ searchParams }: Props) {
                           now={now}
                         />
                       ) : (
-                        <span style={{ color: "var(--ink-muted)" }}>нет</span>
+                        <span className="nl-muted">нет</span>
                       )}
                     </td>
                   </ClickableRow>

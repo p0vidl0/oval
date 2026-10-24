@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminBanner, PostStatusBadge } from "@/components/admin/admin-badges";
 import { PublicationEditor } from "@/components/admin/publication-editor";
+import { BackLink } from "@/components/nl/ui";
 import { updatePublication } from "@/lib/admin/feed-actions";
 import { isTelegramChannelPublishConfigured } from "@/lib/bots/telegram/channel-config";
 import { listImagesForPost } from "@/lib/feed/post-images";
@@ -44,13 +45,7 @@ export default async function AdminPostDetailPage({
 
   return (
     <main>
-      <Link
-        href="/admin/posts"
-        className="caption"
-        style={{ color: "var(--ink-muted)" }}
-      >
-        ← Публикации
-      </Link>
+      <BackLink href="/admin/posts">Публикации</BackLink>
       <p
         className="caption"
         style={{
@@ -75,7 +70,7 @@ export default async function AdminPostDetailPage({
       >
         Редактирование
       </h1>
-      <p className="caption" style={{ color: "var(--ink-muted)" }}>
+      <p className="caption nl-muted">
         Создано {formatDateTimeRu(post.createdAt)}
         {post.publishedAt
           ? ` · ${isPostScheduled(post, now) ? "выйдет" : "опубликовано"} ${formatDateTimeRu(post.publishedAt)}`
