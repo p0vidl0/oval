@@ -65,6 +65,18 @@ export function initialPublicationState(
   }
 }
 
+/**
+ * Только поля статуса. `current` на сохранении — вся строка поста:
+ * `return current` протащил бы старые title/body и затёр бы текст из формы.
+ */
+function publicationStateOf(current: PublicationState): PublicationState {
+  return {
+    status: current.status,
+    publishedAt: current.publishedAt,
+    unpublishedAt: current.unpublishedAt,
+  };
+}
+
 /** Переход статуса существующего поста. */
 export function nextPublicationState(
   formData: FormData,
@@ -103,7 +115,7 @@ export function nextPublicationState(
           unpublishedAt: current.unpublishedAt,
         };
       }
-      return current;
+      return publicationStateOf(current);
     case "unpublish":
       return live
         ? {
@@ -111,8 +123,8 @@ export function nextPublicationState(
             publishedAt: current.publishedAt,
             unpublishedAt: now,
           }
-        : current;
+        : publicationStateOf(current);
     default:
-      return current;
+      return publicationStateOf(current);
   }
 }

@@ -139,7 +139,14 @@ export async function updatePublication(formData: FormData) {
   await db.transaction(async (tx) => {
     await tx
       .update(feedPosts)
-      .set({ title, body, pinned, ...next })
+      .set({
+        title,
+        body,
+        pinned,
+        status: next.status,
+        publishedAt: next.publishedAt,
+        unpublishedAt: next.unpublishedAt,
+      })
       .where(eq(feedPosts.id, postId));
     await savePinnedForState(tx, postId, pinned, next);
   });

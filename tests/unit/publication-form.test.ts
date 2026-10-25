@@ -102,6 +102,56 @@ describe("nextPublicationState", () => {
     ).toEqual(scheduled);
   });
 
+  it("save не подставляет текст, который был при создании", () => {
+    // Сохранение передаёт всю строку поста. Если вернуть её как есть,
+    // spread { title, body, pinned, ...next } затирает текст из формы.
+    const row = {
+      ...live,
+      id: "post-1",
+      title: "Заголовок при создании",
+      body: "Текст при создании",
+      pinned: true,
+    };
+    const next = nextPublicationState(
+      form({ submit_action: "save" }),
+      row,
+      now,
+    );
+    const patch = {
+      title: "Новый заголовок",
+      body: "Отредактированный текст",
+      pinned: false,
+      ...next,
+    };
+    expect(patch.title).toBe("Новый заголовок");
+    expect(patch.body).toBe("Отредактированный текст");
+    expect(patch.pinned).toBe(false);
+    expect(next).toEqual({
+      status: live.status,
+      publishedAt: live.publishedAt,
+      unpublishedAt: live.unpublishedAt,
+    });
+  });
+
+  it.each([
+    ["draft", live],
+    ["unpublish", draft],
+  ] as const)("%s не протаскивает поля строки поста", (action, state) => {
+    const row = {
+      ...state,
+      id: "post-1",
+      title: "Заголовок при создании",
+      body: "Текст при создании",
+    };
+    expect(
+      nextPublicationState(form({ submit_action: action }), row, now),
+    ).toEqual({
+      status: state.status,
+      publishedAt: state.publishedAt,
+      unpublishedAt: state.unpublishedAt,
+    });
+  });
+
   it("republish keeps original date for unpublished post", () => {
     const unpublished = {
       ...live,
