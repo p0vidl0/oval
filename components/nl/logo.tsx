@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { FEED_LIST_PATH } from "@/lib/feed/feed-list-path";
 
 type Props = {
   size?: number;
@@ -7,7 +8,11 @@ type Props = {
   href?: string;
 };
 
-export function NlLogo({ size = 48, showTitle = true, href = "/feed" }: Props) {
+export function NlLogo({
+  size = 48,
+  showTitle = true,
+  href = FEED_LIST_PATH,
+}: Props) {
   const mark = (
     <span
       className="nl-logo-mark"

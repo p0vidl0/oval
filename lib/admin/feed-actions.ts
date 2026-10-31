@@ -19,6 +19,7 @@ import {
 } from "@/lib/admin/save-post-images";
 import { db } from "@/lib/db/client";
 import { feedPosts } from "@/lib/db/schema";
+import { FEED_LIST_PATH } from "@/lib/feed/feed-list-path";
 import { postPath } from "@/lib/feed/open-post-url";
 import { maxImagesForPostType } from "@/lib/feed/post-image-limits";
 import { isPostLive, isPostScheduled } from "@/lib/feed/publication";
@@ -37,7 +38,7 @@ function revalidatePost(
   sessionId: string | null,
   slug: string,
 ) {
-  revalidatePath("/feed");
+  revalidatePath(FEED_LIST_PATH);
   revalidatePath(postPath(slug));
   revalidatePath(`/feed/${postId}`);
   revalidatePath("/admin/posts");

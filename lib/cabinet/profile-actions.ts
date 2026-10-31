@@ -26,7 +26,7 @@ export async function updateProfileName(
     .set({ name, rosterNameVisible, updatedAt: new Date() })
     .where(eq(user.id, session.user.id));
   revalidatePath("/cabinet");
-  revalidatePath("/feed", "layout");
+  revalidatePath("/", "layout");
   return { status: "saved" };
 }
 
@@ -44,6 +44,6 @@ export async function saveProfileNameClient(
     .set({ name, updatedAt: new Date() })
     .where(eq(user.id, session.user.id));
   revalidatePath("/cabinet");
-  revalidatePath("/feed");
+  revalidatePath("/");
   return { ok: true };
 }

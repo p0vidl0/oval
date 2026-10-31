@@ -364,8 +364,8 @@ function testE2e(): number {
       env.BETTER_AUTH_URL ??
       "http://localhost:13001";
     logE2eStep(`Checking app at ${baseUrl}…`);
-    if (!waitForHttpOk(`${baseUrl}/feed`)) {
-      console.error(`[test-e2e] App not reachable at ${baseUrl}/feed`);
+    if (!waitForHttpOk(`${baseUrl}/`)) {
+      console.error(`[test-e2e] App not reachable at ${baseUrl}/`);
       exitCode = 1;
       return exitCode;
     }

@@ -32,6 +32,7 @@ describe("feedPostSlugFromAnalyticsPath", () => {
 
 describe("labelForAnalyticsPath", () => {
   it("uses static labels for known routes", () => {
+    expect(labelForAnalyticsPath("/", new Map())).toBe("Лента");
     expect(labelForAnalyticsPath("/feed", new Map())).toBe("Лента");
     expect(labelForAnalyticsPath("/login", new Map())).toBe("Вход");
     expect(labelForAnalyticsPath("/privacy", new Map())).toBe(

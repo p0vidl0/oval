@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { FeedPage, feedPageMetadata } from "@/app/feed/feed-page";
 
-export default function Home() {
-  redirect("/feed");
-}
+export const metadata = feedPageMetadata;
+
+export default FeedPage;

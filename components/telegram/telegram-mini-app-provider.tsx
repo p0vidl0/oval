@@ -186,7 +186,7 @@ export function TelegramMiniAppProvider({ children }: { children: ReactNode }) {
         if (cancelled || !session.data?.session) return;
 
         trackAnalyticsEvent("login_success", {
-          path: pathnameRef.current || "/feed",
+          path: pathnameRef.current || "/",
           isMiniApp: true,
           props: { authMethod: "telegram_mini_app" },
         });

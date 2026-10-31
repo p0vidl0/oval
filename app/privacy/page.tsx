@@ -20,7 +20,7 @@ export default function PrivacyPage() {
   return (
     <NlShell tab="feed">
       <main className="nl-page nl-privacy" style={{ maxWidth: 720 }}>
-        <BackLink href="/feed">На главную</BackLink>
+        <BackLink href="/">На главную</BackLink>
         <h1
           className="nl-display"
           style={{ marginTop: "var(--space-4)", fontSize: 36 }}

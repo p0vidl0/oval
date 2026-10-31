@@ -10,6 +10,7 @@ import { ADMIN_HOME } from "@/lib/admin/routes";
 import { can } from "@/lib/auth/capabilities";
 import { getServerSession } from "@/lib/auth/session";
 import { userHeaderDisplay } from "@/lib/auth/user-display";
+import { FEED_LIST_PATH } from "@/lib/feed/feed-list-path";
 
 export async function NlShell({
   children,
@@ -66,7 +67,7 @@ export async function NlShell({
             ) : (
               <>
                 {showFeedLink ? (
-                  <Link href="/feed" className="nl-header__nav-link">
+                  <Link href={FEED_LIST_PATH} className="nl-header__nav-link">
                     Лента
                   </Link>
                 ) : null}
@@ -91,7 +92,7 @@ export async function NlShell({
       </footer>
       <nav className="nl-tabbar" aria-label="Разделы">
         <Link
-          href="/feed"
+          href={FEED_LIST_PATH}
           className="nl-tab"
           aria-current={tab === "feed" ? "page" : undefined}
         >

@@ -30,7 +30,7 @@ export default async function LoginPage({ searchParams }: Props) {
         />
         <div className="nl-login-cover__scrim" aria-hidden="true" />
         <div className="nl-login-cover__logo">
-          <NlLogo showTitle={false} href="/feed" size={56} />
+          <NlLogo showTitle={false} size={56} />
         </div>
         <div className="nl-login-cover__foot">
           <h2 className="nl-display nl-login-cover__title">

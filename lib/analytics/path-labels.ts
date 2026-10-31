@@ -11,7 +11,7 @@ const POST_ID_RE =
 const ROOT_POST_SLUG_RE = /^\/(\d{4}-\d{2}-\d{2}(?:-\d+)?)$/;
 
 export const STATIC_ANALYTICS_PATH_LABELS: Readonly<Record<string, string>> = {
-  "/": "Главная",
+  "/": "Лента",
   "/feed": "Лента",
   "/login": "Вход",
   "/login/telegram/complete": "Telegram — вход",

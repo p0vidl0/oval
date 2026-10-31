@@ -42,7 +42,7 @@ export async function registerForTrainingClient(
 
   await recordServerEvent({
     name: "registration_complete",
-    path: postPublicPath ?? "/feed",
+    path: postPublicPath ?? "/",
     props: {
       registrationId: result.registrationId,
       sessionId: result.sessionId,

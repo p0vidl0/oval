@@ -63,7 +63,7 @@ function revalidateTraining(sessionId: string) {
   revalidatePath("/admin/posts");
   revalidatePath("/admin/registrations");
   revalidatePath("/admin/payments");
-  revalidatePath("/feed");
+  revalidatePath("/");
   revalidatePath("/cabinet");
 }
 

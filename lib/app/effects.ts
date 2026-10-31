@@ -14,7 +14,7 @@ export async function applyRegistrationEffects(
   sessionIds: readonly (string | null | undefined)[],
   options?: { realtime?: boolean; attendance?: boolean },
 ) {
-  revalidatePath("/feed", "layout");
+  revalidatePath("/", "layout");
   revalidatePath("/cabinet", "layout");
   revalidatePath("/admin", "layout");
   for (const sessionId of new Set(sessionIds)) {

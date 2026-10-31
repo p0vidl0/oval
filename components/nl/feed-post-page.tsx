@@ -107,7 +107,7 @@ export async function FeedPostPageView({ post, searchParams: query }: Props) {
     return (
       <NlShell tab="feed">
         <main className="nl-page">
-          <BackLink href="/feed">Лента</BackLink>
+          <BackLink href="/">Лента</BackLink>
           <div className="nl-feed-layout nl-post-single">
             <div className="nl-feed-main">
               <NlFeedPostCard
@@ -246,7 +246,7 @@ export async function FeedPostPageView({ post, searchParams: query }: Props) {
   return (
     <NlShell tab="feed">
       <main className="nl-page">
-        <BackLink href="/feed">Лента</BackLink>
+        <BackLink href="/">Лента</BackLink>
         <div className="nl-feed-layout nl-post-single">
           <div className="nl-feed-main">
             <NlFeedPostCard

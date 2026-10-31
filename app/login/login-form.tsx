@@ -219,7 +219,7 @@ export function LoginForm() {
         </form>
       )}
 
-      <Link href="/feed" className="nl-button nl-button--text">
+      <Link href="/" className="nl-button nl-button--text">
         К ленте
       </Link>
     </>

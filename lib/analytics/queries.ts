@@ -190,7 +190,7 @@ export async function getAnalyticsFunnel(
       and(
         sinceCondition(days),
         eq(analyticsEvents.name, "page_view"),
-        sql`${analyticsEvents.path} = '/feed'`,
+        sql`${analyticsEvents.path} in ('/', '/feed')`,
       ),
     );
 
