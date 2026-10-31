@@ -14,8 +14,33 @@ permissions:
   packages: write
 
 jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run task -- validate-full
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run task -- test-integration
+
   build-and-push:
-    if: github.ref == 'refs/heads/master'
+    needs: [unit, integration]
+    if: success() && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.image_ref.outputs.image }}
@@ -61,7 +86,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: success() && github.ref == 'refs/heads/master'
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -126,10 +151,11 @@ jobs:
             [ -n "${VK_CLIENT_SECRET:-}" ] && echo "VK_CLIENT_SECRET=${VK_CLIENT_SECRET}"
           } > secrets.env
           ssh "${SSH_USER}@${SSH_HOST}" "mkdir -p '${REMOTE_DIR}'"
-          scp .deploy/config.env .deploy/docker-compose.yaml secrets.env "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/"
+          scp .deploy/config.env .deploy/compose.yaml secrets.env "${SSH_USER}@${SSH_HOST}:${REMOTE_DIR}/"
           ssh "${SSH_USER}@${SSH_HOST}" "set -euo pipefail
             cd '${REMOTE_DIR}'
+            rm -f docker-compose.yaml
             mkdir -p data/uploads
             cat config.env secrets.env > .env
-            docker compose -f docker-compose.yaml pull
-            docker compose -f docker-compose.yaml up -d"
+            docker compose -f compose.yaml pull
+            docker compose -f compose.yaml up -d"

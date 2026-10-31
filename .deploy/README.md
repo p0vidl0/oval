@@ -9,7 +9,7 @@
 | `config.env` | репозиторий [`.deploy/config.env`](config.env) — домен, Traefik, SMTP-хост, публичные URL |
 | `secrets.env` | генерируется в CI при каждом деплое |
 | `.env` | на деплое: `cat config.env secrets.env` — подстановки `${OVAL_*}` для `docker compose` |
-| `docker-compose.yaml` | репозиторий |
+| `compose.yaml` | репозиторий |
 | `data/uploads/` | том: загруженные изображения постов (`/app/data/uploads` в контейнере) |
 
 Шаблон секретов: [`secrets.env.example`](secrets.env.example).
@@ -19,7 +19,7 @@
 | Файл | Назначение |
 |------|------------|
 | `Dockerfile` | Production-образ Next.js + миграции Drizzle при старте |
-| `docker-compose.yaml` | Сервис `oval` за Traefik |
+| `compose.yaml` | Сервис `oval` за Traefik |
 | `config.env` | Несекретный конфиг (редактируется в git) |
 | `entrypoint.sh` | `drizzle-kit migrate` → `node server.js` (Next.js standalone) |
 | `migrate-package.json` | Минимальные deps только для migrate в `/app/migrate` |
@@ -28,7 +28,7 @@
 
 Workflow: [`.github/workflows/deploy-vps.yml`](../.github/workflows/deploy-vps.yml).
 
-Триггер: push в `master` или `workflow_dispatch`.
+Триггер: push в `master` или `workflow_dispatch`. Сначала параллельно `unit` (`validate-full`) и `integration`; образ и выкладка на VPS — только если оба прошли. Новый push отменяет текущий прогон (`cancel-in-progress`).
 
 ### Secrets
 

@@ -1,5 +1,4 @@
 # VPS: Traefik (external) → Next.js. На сервере: `docker compose` (Compose V2).
-version: "3.7"
 
 services:
   oval:

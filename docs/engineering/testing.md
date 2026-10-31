@@ -65,4 +65,4 @@ Patterns worth reusing:
 
 ## CI
 
-[`.github/workflows/test.yml`](../../.github/workflows/test.yml): unit job; integration job with Docker (when enabled).
+[`.github/workflows/deploy-vps.yml`](../../.github/workflows/deploy-vps.yml) on push to `master` (and `workflow_dispatch`): `unit` (`validate-full`) and `integration` run in parallel. The image build and VPS deploy start only after both succeed.
