@@ -45,9 +45,9 @@ Mini App URL в BotFather — публичный `https://<OVAL_DOMAIN>/feed` (�
 ## Подготовка сервера (чеклист)
 
 1. **Пользователь и каталог** — пользователь `oval`, каталог `SSH_PATH`, ключ деплоя, Docker с плагином **Compose V2** (`docker compose`, не отдельный `docker-compose`).
-2. **Postgres** — пользователь/БД `oval`, хост `postgres:5432` в сети `theta-brige`.
+2. **Postgres** — пользователь/БД `oval`, хост `postgres:5432` в сети `oval-db`. Порт наружу не публикуется.
 3. **`data/uploads`** — создаётся при деплое; persistence загрузок между пересозданиями контейнера.
-4. **Traefik** — та же external-сеть, что у omsk-bike (`TRAEFIK_NETWORK` в `config.env`).
+4. **Traefik** — external-сеть `web` (`TRAEFIK_NETWORK` в `config.env`). Приложение в ней и в `oval-db`; метка `traefik.docker.network` указывает Traefik на `web`.
 5. Отредактировать **`config.env`** в репо (домен, URL), задать secrets в GitHub → деплой.
 
 Миграции при каждом старте контейнера (`entrypoint.sh`).

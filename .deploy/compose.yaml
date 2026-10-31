@@ -12,6 +12,7 @@ services:
       - seccomp=unconfined
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-web}"
       - "traefik.http.routers.oval.rule=Host(`${OVAL_DOMAIN}`)"
       - "traefik.http.routers.oval.entrypoints=websecure"
       - "traefik.http.routers.oval.tls.certresolver=${TRAEFIK_CERT_RESOLVER:-myresolver}"
@@ -29,8 +30,12 @@ services:
       traefik:
         aliases:
           - oval
+      oval-db:
 
 networks:
   traefik:
     external: true
-    name: ${TRAEFIK_NETWORK:-theta-brige}
+    name: ${TRAEFIK_NETWORK:-web}
+  oval-db:
+    external: true
+    name: oval-db
