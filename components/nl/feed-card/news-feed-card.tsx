@@ -47,6 +47,7 @@ export function NewsFeedCard(props: FeedCardProps) {
             <div className="nl-card__text">
               <FeedCardTitle
                 postSlug={postSlug}
+                type={type}
                 title={title}
                 linkTitle={linkTitle}
               />

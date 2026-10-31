@@ -43,7 +43,7 @@ type Props = {
 };
 
 export async function FeedPostPageView({ post, searchParams: query }: Props) {
-  const publicPath = postPath(post.slug);
+  const publicPath = postPath(post.slug, post.type);
   const session = await getServerSession();
   const training = await getTrainingSessionForPost(post);
   const canManage = canManageSessionFromFeed(
@@ -267,7 +267,7 @@ export async function FeedPostPageView({ post, searchParams: query }: Props) {
                 externalHref:
                   post.type === "race" ? meta.externalUrl : undefined,
                 trainingHref: announcement
-                  ? postPath(announcement.slug)
+                  ? postPath(announcement.slug, "training_announcement")
                   : undefined,
                 manageHref:
                   canManage && training

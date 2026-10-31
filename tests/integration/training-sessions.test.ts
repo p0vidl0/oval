@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/schema";
 import { listImagesForPost } from "@/lib/feed/post-images";
 import { listPublishedFeedPosts } from "@/lib/feed/queries";
+import { postSlugDay } from "@/lib/feed/slug";
 import { ensurePaymentForRegistration } from "@/lib/payments/checkout";
 import { markRegistrationPaid } from "@/lib/payments/mark-paid";
 import {
@@ -105,6 +106,7 @@ run("training sessions", () => {
     )[0];
     expect(post?.relatedSessionId).toBe(sessionId);
     expect(post?.title).toBe("Техничная");
+    expect(post?.slug).toBe(postSlugDay(schedule.startsAt));
     const events = await db
       .select()
       .from(trainingSessionEvents)

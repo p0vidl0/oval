@@ -27,7 +27,7 @@ export function FeedRegisterButton({
   needsName = false,
   onSuccess,
 }: Props) {
-  const publicPath = postPath(postSlug);
+  const publicPath = postPath(postSlug, "training_announcement");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);

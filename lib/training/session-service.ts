@@ -14,7 +14,7 @@ import {
 } from "@/lib/db/schema";
 import { insertRegistrationEvents } from "@/lib/domain/registration/events";
 import { livePostCondition } from "@/lib/feed/publication";
-import { allocatePostSlug } from "@/lib/feed/slug";
+import { allocatePostSlug, instantForNewPostSlug } from "@/lib/feed/slug";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -117,7 +117,13 @@ async function insertChangePost(
   const id = crypto.randomUUID();
   const publish = params.post.mode === "publish";
   const publishedAt = publish ? new Date() : null;
-  const slug = await allocatePostSlug(tx, publishedAt ?? new Date());
+  const slug = await allocatePostSlug(
+    tx,
+    instantForNewPostSlug({
+      type: params.type,
+      publishedAt,
+    }),
+  );
   await tx.insert(feedPosts).values({
     id,
     slug,
@@ -164,7 +170,14 @@ export async function createTrainingSession(params: {
     });
     if (params.announcement && announcementPostId) {
       const a = params.announcement;
-      const slug = await allocatePostSlug(tx, a.publishedAt ?? new Date());
+      const slug = await allocatePostSlug(
+        tx,
+        instantForNewPostSlug({
+          type: "training_announcement",
+          sessionStartsAt: params.schedule.startsAt,
+          publishedAt: a.publishedAt,
+        }),
+      );
       await tx.insert(feedPosts).values({
         id: announcementPostId,
         slug,

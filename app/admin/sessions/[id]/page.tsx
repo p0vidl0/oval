@@ -129,7 +129,7 @@ export default async function AdminSessionPage({
               <>
                 {isPostLive(announcement, now) ? (
                   <Link
-                    href={postPath(announcement.slug)}
+                    href={postPath(announcement.slug, "training_announcement")}
                     className="nl-button"
                     target="_blank"
                     rel="noopener noreferrer"

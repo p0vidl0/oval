@@ -1,6 +1,8 @@
 import { db } from "@/lib/db/client";
 import { payments, registrations, trainingSessions } from "@/lib/db/schema";
 import { account, user } from "@/lib/db/schema/auth-schema";
+// Статический импорт: динамический import() на Node 24 не резолвит `@/` внутри модуля.
+import { insertFeedPost } from "@/tests/helpers/insert-feed-post";
 
 async function insertUser(params: {
   id: string;
@@ -42,7 +44,6 @@ async function seedSessionWithRegistrations(options: {
     status: "scheduled",
     onlinePaymentEnabled: true,
   });
-  const { insertFeedPost } = await import("@/tests/helpers/insert-feed-post");
   await insertFeedPost({
     id: postId,
     type: "training_announcement",
@@ -298,7 +299,6 @@ export async function seedE2eScenario(
       paymentState: "due",
     });
     const postId = `e2e-today-post-${suffix}`;
-    const { insertFeedPost } = await import("@/tests/helpers/insert-feed-post");
     await insertFeedPost({
       id: postId,
       type: "training_announcement",
@@ -410,7 +410,6 @@ export async function seedFeedPostPublicUrlE2e(runId: string) {
   const postId = `e2e-slug-${suffix}`;
   const title = `E2E Public URL ${suffix}`;
   const publishedAt = new Date("2024-07-01T18:00:00+06:00");
-  const { insertFeedPost } = await import("@/tests/helpers/insert-feed-post");
   const postSlug = await insertFeedPost({
     id: postId,
     type: "news",
@@ -420,4 +419,38 @@ export async function seedFeedPostPublicUrlE2e(runId: string) {
     publishedAt,
   });
   return { postId, postSlug, title };
+}
+
+/** Опубликованный анонс: slug по дню тренировки, URL /sessions/{slug}. */
+export async function seedAnnouncementPublicUrlE2e(runId: string) {
+  if (!process.env.DATABASE_URL?.trim()) {
+    throw new Error("DATABASE_URL is required for e2e seed helpers");
+  }
+  const suffix = runId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
+  const postId = `e2e-ann-${suffix}`;
+  const sessionId = `e2e-ann-sess-${suffix}`;
+  const title = `E2E Session URL ${suffix}`;
+  const startsAt = new Date("2024-08-15T14:00:00+06:00");
+  const publishedAt = new Date("2024-08-01T12:00:00+06:00");
+  await db.insert(trainingSessions).values({
+    id: sessionId,
+    title,
+    startsAt,
+    priceCents: 50000,
+    capacity: 20,
+    status: "scheduled",
+  });
+  const postSlug = await insertFeedPost(
+    {
+      id: postId,
+      type: "training_announcement",
+      title,
+      body: "e2e session route",
+      status: "published",
+      publishedAt,
+      relatedSessionId: sessionId,
+    },
+    { slugAt: startsAt },
+  );
+  return { postId, postSlug, title, sessionId };
 }

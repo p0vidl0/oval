@@ -153,7 +153,7 @@ export function buildFeedLiveCard(params: {
   const showPay = due && training && training.onlinePaymentEnabled;
   const onsitePay = due && training && !training.onlinePaymentEnabled;
 
-  const publicPath = postPath(post.slug);
+  const publicPath = postPath(post.slug, post.type);
 
   return {
     postId: post.id,
@@ -199,7 +199,7 @@ export function buildFeedLiveCard(params: {
       canRegister,
       trainingHref:
         !isAnnouncement && params.announcementPostSlug
-          ? postPath(params.announcementPostSlug)
+          ? postPath(params.announcementPostSlug, "training_announcement")
           : undefined,
       registerHref:
         !params.isLoggedIn && training && canRegister

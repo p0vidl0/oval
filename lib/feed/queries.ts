@@ -20,6 +20,7 @@ export async function listLiveFeedPostsForSitemap() {
     .select({
       id: feedPosts.id,
       slug: feedPosts.slug,
+      type: feedPosts.type,
       updatedAt: feedPosts.updatedAt,
     })
     .from(feedPosts)

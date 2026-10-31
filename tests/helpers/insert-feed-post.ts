@@ -5,8 +5,11 @@ import { allocatePostSlug } from "@/lib/feed/slug";
 
 type FeedPostInsert = Omit<InferInsertModel<typeof feedPosts>, "slug">;
 
-export async function insertFeedPost(row: FeedPostInsert): Promise<string> {
-  const at = row.publishedAt ?? row.createdAt ?? new Date();
+export async function insertFeedPost(
+  row: FeedPostInsert,
+  options?: { slugAt?: Date },
+): Promise<string> {
+  const at = options?.slugAt ?? row.publishedAt ?? row.createdAt ?? new Date();
   let slug = "";
   await db.transaction(async (tx) => {
     slug = await allocatePostSlug(tx, at);

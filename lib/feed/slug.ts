@@ -1,6 +1,7 @@
 import { eq, like, or } from "drizzle-orm";
 import type { db } from "@/lib/db/client";
 import { feedPosts } from "@/lib/db/schema";
+import type { FeedPostType } from "@/lib/feed/types";
 import { formatDateInput } from "@/lib/format/datetime";
 
 /** Публичный slug: `2026-10-31` или `2026-10-31-2`. */
@@ -26,6 +27,22 @@ export function instantForPostSlug(post: {
   createdAt: Date;
 }): Date {
   return post.publishedAt ?? post.createdAt;
+}
+
+/**
+ * День slug новой записи. Анонс — календарный день тренировки;
+ * остальные типы — момент публикации.
+ */
+export function instantForNewPostSlug(input: {
+  type: FeedPostType;
+  sessionStartsAt?: Date | null;
+  publishedAt?: Date | null;
+  now?: Date;
+}): Date {
+  if (input.type === "training_announcement" && input.sessionStartsAt) {
+    return input.sessionStartsAt;
+  }
+  return input.publishedAt ?? input.now ?? new Date();
 }
 
 type SlugTx = Pick<typeof db, "select">;

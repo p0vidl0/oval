@@ -23,7 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const postPages: MetadataRoute.Sitemap = posts.map((post) => ({
-    url: absoluteSiteUrl(postPath(post.slug)),
+    url: absoluteSiteUrl(postPath(post.slug, post.type)),
     lastModified: post.updatedAt,
     changeFrequency: "weekly" as const,
     priority: 0.8,

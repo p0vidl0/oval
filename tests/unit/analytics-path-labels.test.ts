@@ -24,6 +24,12 @@ describe("feedPostSlugFromAnalyticsPath", () => {
   it("reads root and legacy slug paths", () => {
     expect(feedPostSlugFromAnalyticsPath("/2026-10-31")).toBe("2026-10-31");
     expect(feedPostSlugFromAnalyticsPath("/2026-10-31-2")).toBe("2026-10-31-2");
+    expect(feedPostSlugFromAnalyticsPath("/news/2026-10-31")).toBe(
+      "2026-10-31",
+    );
+    expect(feedPostSlugFromAnalyticsPath("/sessions/2026-10-31-2")).toBe(
+      "2026-10-31-2",
+    );
     expect(feedPostSlugFromAnalyticsPath("/feed/2026-10-31")).toBe(
       "2026-10-31",
     );
@@ -54,7 +60,9 @@ describe("labelForAnalyticsPath", () => {
 
   it("uses slug map keys for root post paths", () => {
     const titles = new Map([["slug:2026-10-31", "Новость дня"]]);
-    expect(labelForAnalyticsPath("/2026-10-31", titles)).toBe("Новость дня");
+    expect(labelForAnalyticsPath("/news/2026-10-31", titles)).toBe(
+      "Новость дня",
+    );
   });
 
   it("falls back to path for unknown routes", () => {

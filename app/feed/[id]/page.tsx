@@ -11,16 +11,16 @@ type Props = {
   params: Promise<{ id: string }>;
 };
 
-/** Старые ссылки `/feed/{uuid}` и `/feed/{slug}` → канонический `/{slug}`. */
+/** Старые ссылки `/feed/{uuid}` и `/feed/{slug}` → канонический путь. */
 export default async function LegacyFeedPostRedirect({ params }: Props) {
   const { id } = await params;
 
   if (isLikelyPostSlug(id)) {
     const bySlug = await getPublishedFeedPostBySlug(id);
-    if (bySlug) permanentRedirect(postPath(bySlug.slug));
+    if (bySlug) permanentRedirect(postPath(bySlug.slug, bySlug.type));
   }
 
   const post = await getFeedPostById(id);
   if (!post || !isPostLive(post)) notFound();
-  permanentRedirect(postPath(post.slug));
+  permanentRedirect(postPath(post.slug, post.type));
 }

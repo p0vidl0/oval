@@ -23,7 +23,7 @@ export async function registerForTrainingClient(
 ): Promise<RegisterForTrainingResult> {
   const session = await getServerSession();
   const post = feedPostId ? await getFeedPostById(feedPostId) : null;
-  const postPublicPath = post ? postPath(post.slug) : null;
+  const postPublicPath = post ? postPath(post.slug, post.type) : null;
   if (!session) {
     redirect(
       postPublicPath

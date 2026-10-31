@@ -60,7 +60,7 @@ function buildUpcomingItems(
     const reg = mine.get(tr.id);
     items.set(tr.id, {
       sessionId: tr.id,
-      href: postPath(post.slug),
+      href: postPath(post.slug, post.type),
       startsAt: tr.startsAt,
       title: tr.title,
       status: reg
@@ -77,7 +77,9 @@ function buildUpcomingItems(
     }
     items.set(tr.id, {
       sessionId: tr.id,
-      href: announcementPostSlug ? postPath(announcementPostSlug) : "/cabinet",
+      href: announcementPostSlug
+        ? postPath(announcementPostSlug, "training_announcement")
+        : "/cabinet",
       startsAt: tr.startsAt,
       title: tr.title,
       status: registrationStatusText(registration, tr),
@@ -184,7 +186,10 @@ export async function FeedPage({ searchParams }: Props) {
                           <Link
                             href={
                               announcementPostSlug
-                                ? postPath(announcementPostSlug)
+                                ? postPath(
+                                    announcementPostSlug,
+                                    "training_announcement",
+                                  )
                                 : "/cabinet"
                             }
                             className="nl-aside-link"
@@ -222,7 +227,10 @@ export async function FeedPage({ searchParams }: Props) {
               >
                 {upcomingWeek.map(({ session: tr, post }) => (
                   <li key={tr.id} style={{ marginBottom: "var(--space-2)" }}>
-                    <Link href={postPath(post.slug)} className="nl-aside-link">
+                    <Link
+                      href={postPath(post.slug, post.type)}
+                      className="nl-aside-link"
+                    >
                       {formatShortListDate(tr.startsAt)} ·{" "}
                       {formatTimeHm(tr.startsAt)}
                       {tr.status === "cancelled" ? (

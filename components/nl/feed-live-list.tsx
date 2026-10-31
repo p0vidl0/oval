@@ -121,7 +121,7 @@ function patchActiveCount(
       canRegister,
       registerHref:
         !isLoggedIn && canRegister
-          ? `/login?next=${encodeURIComponent(postPath(card.postSlug))}`
+          ? `/login?next=${encodeURIComponent(postPath(card.postSlug, card.type))}`
           : undefined,
     },
   };

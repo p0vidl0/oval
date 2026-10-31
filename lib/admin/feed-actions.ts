@@ -20,7 +20,7 @@ import {
 import { db } from "@/lib/db/client";
 import { feedPosts } from "@/lib/db/schema";
 import { FEED_LIST_PATH } from "@/lib/feed/feed-list-path";
-import { postPath } from "@/lib/feed/open-post-url";
+import { legacyRootPostPath, postPath } from "@/lib/feed/open-post-url";
 import { maxImagesForPostType } from "@/lib/feed/post-image-limits";
 import { isPostLive, isPostScheduled } from "@/lib/feed/publication";
 import {
@@ -28,18 +28,21 @@ import {
   getFeedPostById,
   getTrainingSessionById,
 } from "@/lib/feed/queries";
-import { allocatePostSlug } from "@/lib/feed/slug";
+import { allocatePostSlug, instantForNewPostSlug } from "@/lib/feed/slug";
 import { scheduleSocialPublishAfter } from "@/lib/feed/social-publish";
 import { ensureSocialPublishJobs } from "@/lib/feed/social-publish-jobs";
+import type { FeedPostType } from "@/lib/feed/types";
 import { publishFeedEvent } from "@/lib/realtime/feed-event-bus";
 
 function revalidatePost(
   postId: string,
   sessionId: string | null,
   slug: string,
+  type: FeedPostType,
 ) {
   revalidatePath(FEED_LIST_PATH);
-  revalidatePath(postPath(slug));
+  revalidatePath(postPath(slug, type));
+  revalidatePath(legacyRootPostPath(slug));
   revalidatePath(`/feed/${postId}`);
   revalidatePath("/admin/posts");
   revalidatePath(`/admin/posts/${postId}`);
@@ -80,18 +83,25 @@ export async function createPublication(formData: FormData) {
     redirect(withError(backUrl, error.message));
   }
 
+  let sessionStartsAt: Date | null = null;
   if (sessionId) {
-    if (!(await getTrainingSessionById(sessionId))) {
+    const training = await getTrainingSessionById(sessionId);
+    if (!training) {
       throw new Error("Тренировка не найдена");
     }
     if (await getAnnouncementForSession(sessionId)) {
       throw new Error("У тренировки уже есть анонс");
     }
+    sessionStartsAt = training.startsAt;
   }
-  const type = sessionId ? "training_announcement" : "news";
+  const type: FeedPostType = sessionId ? "training_announcement" : "news";
 
   const id = crypto.randomUUID();
-  const slugAt = state.publishedAt ?? new Date();
+  const slugAt = instantForNewPostSlug({
+    type,
+    sessionStartsAt,
+    publishedAt: state.publishedAt,
+  });
   let slug = "";
   await db.transaction(async (tx) => {
     slug = await allocatePostSlug(tx, slugAt);
@@ -112,7 +122,7 @@ export async function createPublication(formData: FormData) {
   await appendImagesFromForm(id, formData, title, maxImagesForPostType(type));
   await ensureSocialPublishJobs(id);
 
-  revalidatePost(id, sessionId, slug);
+  revalidatePost(id, sessionId, slug, type);
   emitFeedPostLive(id, isPostLive(state), false);
   scheduleSocialPublishAfter(id, state);
   if (sessionId) {
@@ -170,7 +180,7 @@ export async function updatePublication(formData: FormData) {
     maxImagesForPostType(post.type),
   );
 
-  revalidatePost(postId, post.relatedSessionId, post.slug);
+  revalidatePost(postId, post.relatedSessionId, post.slug, post.type);
   const wasLive = isPostLive(post, now);
   const isLive = isPostLive(next, now);
   emitFeedPostLive(postId, isLive, wasLive);

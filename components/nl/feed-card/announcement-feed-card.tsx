@@ -80,6 +80,7 @@ export function AnnouncementFeedCard(props: FeedCardProps) {
           <div className="nl-card__text">
             <FeedCardTitle
               postSlug={postSlug}
+              type={type}
               title={title}
               linkTitle={linkTitle}
             />
@@ -107,7 +108,9 @@ export function AnnouncementFeedCard(props: FeedCardProps) {
               <FeedCardTrainingProgress
                 training={training}
                 href={
-                  linkTitle && !previewMode ? postPath(postSlug) : undefined
+                  linkTitle && !previewMode
+                    ? postPath(postSlug, type)
+                    : undefined
                 }
               />
             ) : null}

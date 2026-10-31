@@ -8,7 +8,8 @@ export const FEED_POST_PATH_RE = /^\/feed\/([^/]+)$/;
 const POST_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-const ROOT_POST_SLUG_RE = /^\/(\d{4}-\d{2}-\d{2}(?:-\d+)?)$/;
+const ROOT_POST_SLUG_RE =
+  /^\/(?:(?:sessions|news)\/)?(\d{4}-\d{2}-\d{2}(?:-\d+)?)$/;
 
 export const STATIC_ANALYTICS_PATH_LABELS: Readonly<Record<string, string>> = {
   "/": "Лента",

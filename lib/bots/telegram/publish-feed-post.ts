@@ -30,10 +30,10 @@ import {
 } from "@/lib/telegram/mini-app-start-param";
 import { type PostUploadFile, readPostUploadFile } from "@/lib/uploads/storage";
 
-function openPostUrl(postId: string, slug: string): string {
+function openPostUrl(postId: string, slug: string, type: FeedPostType): string {
   const miniApp = buildTelegramMiniAppLink(buildMiniAppStartParamPost(postId));
   if (miniApp) return miniApp;
-  return publicFeedPostUrl(slug);
+  return publicFeedPostUrl(slug, type);
 }
 
 function buttonLabel(type: FeedPostType): string {
@@ -41,7 +41,7 @@ function buttonLabel(type: FeedPostType): string {
 }
 
 function postButtonMarkup(postId: string, slug: string, type: FeedPostType) {
-  const url = openPostUrl(postId, slug);
+  const url = openPostUrl(postId, slug, type);
   return [[{ text: buttonLabel(type), url }]];
 }
 

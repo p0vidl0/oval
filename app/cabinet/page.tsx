@@ -202,7 +202,10 @@ export default async function CabinetPage({ searchParams }: Props) {
                             <div className="nl-cabinet-booking__content">
                               {announcementPostSlug ? (
                                 <Link
-                                  href={postPath(announcementPostSlug)}
+                                  href={postPath(
+                                    announcementPostSlug,
+                                    "training_announcement",
+                                  )}
                                   className="nl-display nl-cabinet-booking__title"
                                 >
                                   {training.title}
@@ -322,7 +325,10 @@ export default async function CabinetPage({ searchParams }: Props) {
                               </span>
                               {announcementPostSlug ? (
                                 <Link
-                                  href={postPath(announcementPostSlug)}
+                                  href={postPath(
+                                    announcementPostSlug,
+                                    "training_announcement",
+                                  )}
                                   className="nl-cabinet-history__title"
                                 >
                                   {training.title}

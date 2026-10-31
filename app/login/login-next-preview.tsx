@@ -28,7 +28,9 @@ async function publishedAnnouncementFromNext(next: string | undefined) {
     if (post?.type === "training_announcement") return post;
   }
 
-  const root = next.match(/^\/(\d{4}-\d{2}-\d{2}(?:-\d+)?)(?:\?|$)/);
+  const root = next.match(
+    /^\/(?:sessions\/)?(\d{4}-\d{2}-\d{2}(?:-\d+)?)(?:\?|$)/,
+  );
   const slug = root?.[1];
   if (slug && isLikelyPostSlug(slug)) {
     const post = await getPublishedFeedPostBySlug(slug);
@@ -47,7 +49,7 @@ export async function LoginNextPreview({ next }: Props) {
 
   return (
     <Link
-      href={postPath(post.slug)}
+      href={postPath(post.slug, post.type)}
       className="nl-card nl-login-next-preview"
       style={{
         display: "flex",

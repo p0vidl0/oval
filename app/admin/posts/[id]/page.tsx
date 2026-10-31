@@ -134,7 +134,7 @@ export default async function AdminPostDetailPage({
       >
         {isPostLive(post, now) ? (
           <Link
-            href={postPath(post.slug)}
+            href={postPath(post.slug, post.type)}
             className="nl-button"
             target="_blank"
             rel="noopener noreferrer"

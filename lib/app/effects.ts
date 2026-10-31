@@ -21,7 +21,7 @@ export async function applyRegistrationEffects(
     if (!sessionId) continue;
     const announcement = await getAnnouncementForSession(sessionId);
     if (announcement && isPostLive(announcement)) {
-      revalidatePath(postPath(announcement.slug));
+      revalidatePath(postPath(announcement.slug, announcement.type));
     }
   }
   if (options?.realtime === false) return;
