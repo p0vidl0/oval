@@ -19,6 +19,7 @@ export async function listLiveFeedPostsForSitemap() {
   return db
     .select({
       id: feedPosts.id,
+      slug: feedPosts.slug,
       updatedAt: feedPosts.updatedAt,
     })
     .from(feedPosts)
@@ -55,8 +56,22 @@ export async function getFeedPostById(id: string) {
   return rows[0] ?? null;
 }
 
+export async function getFeedPostBySlug(slug: string) {
+  const rows = await db
+    .select()
+    .from(feedPosts)
+    .where(eq(feedPosts.slug, slug));
+  return rows[0] ?? null;
+}
+
 export async function getPublishedFeedPostById(id: string) {
   const post = await getFeedPostById(id);
+  if (!post || !isPostLive(post)) return null;
+  return post;
+}
+
+export async function getPublishedFeedPostBySlug(slug: string) {
+  const post = await getFeedPostBySlug(slug);
   if (!post || !isPostLive(post)) return null;
   return post;
 }
@@ -202,12 +217,18 @@ export async function getPreviousStartByRescheduledSessions(
   return map;
 }
 
-/** Видимые в ленте анонсы тренировок: sessionId → postId. */
-export async function getLiveAnnouncementIdsBySession(sessionIds: string[]) {
-  const map = new Map<string, string>();
+export type LiveAnnouncementRef = { id: string; slug: string };
+
+/** Видимые в ленте анонсы тренировок: sessionId → пост. */
+export async function getLiveAnnouncementsBySession(sessionIds: string[]) {
+  const map = new Map<string, LiveAnnouncementRef>();
   if (sessionIds.length === 0) return map;
   const rows = await db
-    .select({ id: feedPosts.id, sessionId: feedPosts.relatedSessionId })
+    .select({
+      id: feedPosts.id,
+      slug: feedPosts.slug,
+      sessionId: feedPosts.relatedSessionId,
+    })
     .from(feedPosts)
     .where(
       and(
@@ -217,7 +238,17 @@ export async function getLiveAnnouncementIdsBySession(sessionIds: string[]) {
       ),
     );
   for (const row of rows) {
-    if (row.sessionId) map.set(row.sessionId, row.id);
+    if (row.sessionId) {
+      map.set(row.sessionId, { id: row.id, slug: row.slug });
+    }
   }
+  return map;
+}
+
+/** @deprecated Используйте getLiveAnnouncementsBySession. */
+export async function getLiveAnnouncementIdsBySession(sessionIds: string[]) {
+  const refs = await getLiveAnnouncementsBySession(sessionIds);
+  const map = new Map<string, string>();
+  for (const [sid, ref] of refs) map.set(sid, ref.id);
   return map;
 }

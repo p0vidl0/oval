@@ -4,6 +4,7 @@ import type {
   PaymentState,
   RegistrationStatus,
 } from "@/lib/domain/registration/types";
+import { postPath } from "@/lib/feed/open-post-url";
 import type { FeedPostMeta, FeedPostType } from "@/lib/feed/types";
 import { formatPriceRub, formatTimeHm } from "@/lib/format/datetime";
 import { isRegistrationOpen } from "@/lib/training/registration-rules";
@@ -41,6 +42,7 @@ export type FeedLiveCardActions = {
 
 export type FeedLiveCard = {
   postId: string;
+  postSlug: string;
   type: FeedPostType;
   title: string;
   body: string;
@@ -118,8 +120,8 @@ export function buildFeedLiveCard(params: {
   eventDate: Date | null;
   isLoggedIn: boolean;
   userRegistration?: FeedUserRegistration | null;
-  /** Анонс тренировки (для карточек переноса/отмены). */
-  announcementPostId?: string | null;
+  /** Slug анонса тренировки (для карточек переноса/отмены). */
+  announcementPostSlug?: string | null;
   /** Пометка для записавшегося на карточке переноса/отмены. */
   userNote?: string;
 }): FeedLiveCard {
@@ -151,8 +153,11 @@ export function buildFeedLiveCard(params: {
   const showPay = due && training && training.onlinePaymentEnabled;
   const onsitePay = due && training && !training.onlinePaymentEnabled;
 
+  const publicPath = postPath(post.slug);
+
   return {
     postId: post.id,
+    postSlug: post.slug,
     type: post.type,
     title: post.title,
     body: post.body,
@@ -193,12 +198,12 @@ export function buildFeedLiveCard(params: {
     actions: {
       canRegister,
       trainingHref:
-        !isAnnouncement && params.announcementPostId
-          ? `/feed/${params.announcementPostId}`
+        !isAnnouncement && params.announcementPostSlug
+          ? postPath(params.announcementPostSlug)
           : undefined,
       registerHref:
         !params.isLoggedIn && training && canRegister
-          ? `/login?next=/feed/${post.id}`
+          ? `/login?next=${encodeURIComponent(publicPath)}`
           : undefined,
       payHref: showPay ? `/cabinet/pay/${userRegistration?.id}` : undefined,
       payLabel: training
@@ -238,6 +243,7 @@ export function deriveCanRegister(
 export function liveCardToFeedCardProps(card: FeedLiveCard) {
   return {
     postId: card.postId,
+    postSlug: card.postSlug,
     type: card.type,
     title: card.title,
     body: card.body,

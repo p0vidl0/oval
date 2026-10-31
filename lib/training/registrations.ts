@@ -113,6 +113,7 @@ export async function listUserRegistrations(userId: string) {
       registration: registrations,
       session: trainingSessions,
       announcementPostId: feedPosts.id,
+      announcementPostSlug: feedPosts.slug,
     })
     .from(registrations)
     .innerJoin(
@@ -243,6 +244,7 @@ export async function listUserRegistrationHistory(userId: string) {
       registration: registrations,
       session: trainingSessions,
       announcementPostId: feedPosts.id,
+      announcementPostSlug: feedPosts.slug,
     })
     .from(registrations)
     .innerJoin(

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { postPath } from "@/lib/feed/open-post-url";
 import { listLiveFeedPostsForSitemap } from "@/lib/feed/queries";
 import { absoluteSiteUrl } from "@/lib/site/public-origin";
 
@@ -22,7 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const postPages: MetadataRoute.Sitemap = posts.map((post) => ({
-    url: absoluteSiteUrl(`/feed/${post.id}`),
+    url: absoluteSiteUrl(postPath(post.slug)),
     lastModified: post.updatedAt,
     changeFrequency: "weekly" as const,
     priority: 0.8,

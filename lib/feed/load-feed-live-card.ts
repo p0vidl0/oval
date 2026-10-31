@@ -7,7 +7,7 @@ import {
 } from "@/lib/feed/feed-live-card";
 import { listImagesForPost } from "@/lib/feed/post-images";
 import {
-  getLiveAnnouncementIdsBySession,
+  getLiveAnnouncementsBySession,
   getPublishedFeedPostById,
   getTrainingSessionForPost,
 } from "@/lib/feed/queries";
@@ -67,8 +67,9 @@ export async function loadFeedLiveCardForPost(
     userRegistration: userReg
       ? { id: userReg.id, paymentState: userReg.paymentState }
       : null,
-    announcementPostId: training
-      ? (await getLiveAnnouncementIdsBySession([training.id])).get(training.id)
+    announcementPostSlug: training
+      ? ((await getLiveAnnouncementsBySession([training.id])).get(training.id)
+          ?.slug ?? null)
       : null,
     userNote:
       session && training && post.type !== "training_announcement"

@@ -19,6 +19,7 @@ import {
 } from "@/lib/admin/save-post-images";
 import { db } from "@/lib/db/client";
 import { feedPosts } from "@/lib/db/schema";
+import { postPath } from "@/lib/feed/open-post-url";
 import { maxImagesForPostType } from "@/lib/feed/post-image-limits";
 import { isPostLive, isPostScheduled } from "@/lib/feed/publication";
 import {
@@ -26,12 +27,18 @@ import {
   getFeedPostById,
   getTrainingSessionById,
 } from "@/lib/feed/queries";
+import { allocatePostSlug } from "@/lib/feed/slug";
 import { scheduleSocialPublishAfter } from "@/lib/feed/social-publish";
 import { ensureSocialPublishJobs } from "@/lib/feed/social-publish-jobs";
 import { publishFeedEvent } from "@/lib/realtime/feed-event-bus";
 
-function revalidatePost(postId: string, sessionId: string | null) {
+function revalidatePost(
+  postId: string,
+  sessionId: string | null,
+  slug: string,
+) {
   revalidatePath("/feed");
+  revalidatePath(postPath(slug));
   revalidatePath(`/feed/${postId}`);
   revalidatePath("/admin/posts");
   revalidatePath(`/admin/posts/${postId}`);
@@ -83,9 +90,13 @@ export async function createPublication(formData: FormData) {
   const type = sessionId ? "training_announcement" : "news";
 
   const id = crypto.randomUUID();
+  const slugAt = state.publishedAt ?? new Date();
+  let slug = "";
   await db.transaction(async (tx) => {
+    slug = await allocatePostSlug(tx, slugAt);
     await tx.insert(feedPosts).values({
       id,
+      slug,
       type,
       title,
       body,
@@ -100,7 +111,7 @@ export async function createPublication(formData: FormData) {
   await appendImagesFromForm(id, formData, title, maxImagesForPostType(type));
   await ensureSocialPublishJobs(id);
 
-  revalidatePost(id, sessionId);
+  revalidatePost(id, sessionId, slug);
   emitFeedPostLive(id, isPostLive(state), false);
   scheduleSocialPublishAfter(id, state);
   if (sessionId) {
@@ -158,7 +169,7 @@ export async function updatePublication(formData: FormData) {
     maxImagesForPostType(post.type),
   );
 
-  revalidatePost(postId, post.relatedSessionId);
+  revalidatePost(postId, post.relatedSessionId, post.slug);
   const wasLive = isPostLive(post, now);
   const isLive = isPostLive(next, now);
   emitFeedPostLive(postId, isLive, wasLive);

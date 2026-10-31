@@ -183,6 +183,7 @@ export function snapshotToFeedCardProps(
 
   return {
     postId: "preview",
+    postSlug: "preview",
     type: snapshot.postType,
     title: snapshot.title || "Заголовок",
     body: snapshot.body,

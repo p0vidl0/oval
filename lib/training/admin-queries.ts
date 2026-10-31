@@ -110,6 +110,7 @@ function baseSessionQuery() {
       session: trainingSessions,
       announcement: {
         id: feedPosts.id,
+        slug: feedPosts.slug,
         status: feedPosts.status,
         publishedAt: feedPosts.publishedAt,
       },

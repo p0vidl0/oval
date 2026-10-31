@@ -21,6 +21,7 @@ import { db } from "@/lib/db/client";
 import { user } from "@/lib/db/schema/auth-schema";
 import { describeRegistration } from "@/lib/domain/registration/describe";
 import { PAID_CANCEL_MESSAGE } from "@/lib/domain/registration/types";
+import { postPath } from "@/lib/feed/open-post-url";
 import { getPreviousStartByRescheduledSessions } from "@/lib/feed/queries";
 import {
   formatPriceRub,
@@ -172,7 +173,7 @@ export default async function CabinetPage({ searchParams }: Props) {
                     ({
                       registration,
                       session: training,
-                      announcementPostId,
+                      announcementPostSlug,
                     }) => {
                       const view = describeRegistration({
                         registration,
@@ -199,9 +200,9 @@ export default async function CabinetPage({ searchParams }: Props) {
                           <div className="nl-cabinet-booking__inner">
                             <NlDateStack date={training.startsAt} size="sm" />
                             <div className="nl-cabinet-booking__content">
-                              {announcementPostId ? (
+                              {announcementPostSlug ? (
                                 <Link
-                                  href={`/feed/${announcementPostId}`}
+                                  href={postPath(announcementPostSlug)}
                                   className="nl-display nl-cabinet-booking__title"
                                 >
                                   {training.title}
@@ -287,7 +288,7 @@ export default async function CabinetPage({ searchParams }: Props) {
                       ({
                         registration,
                         session: training,
-                        announcementPostId,
+                        announcementPostSlug,
                       }) => {
                         const price = formatPriceRub(
                           training.priceCents,
@@ -319,9 +320,9 @@ export default async function CabinetPage({ searchParams }: Props) {
                               <span className="nl-cabinet-history__date">
                                 {formatShortListDate(training.startsAt)}
                               </span>
-                              {announcementPostId ? (
+                              {announcementPostSlug ? (
                                 <Link
-                                  href={`/feed/${announcementPostId}`}
+                                  href={postPath(announcementPostSlug)}
                                   className="nl-cabinet-history__title"
                                 >
                                   {training.title}

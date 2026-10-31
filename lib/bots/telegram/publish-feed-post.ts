@@ -30,18 +30,18 @@ import {
 } from "@/lib/telegram/mini-app-start-param";
 import { type PostUploadFile, readPostUploadFile } from "@/lib/uploads/storage";
 
-function openPostUrl(postId: string): string {
+function openPostUrl(postId: string, slug: string): string {
   const miniApp = buildTelegramMiniAppLink(buildMiniAppStartParamPost(postId));
   if (miniApp) return miniApp;
-  return publicFeedPostUrl(postId);
+  return publicFeedPostUrl(slug);
 }
 
 function buttonLabel(type: FeedPostType): string {
   return type === "training_announcement" ? "Записаться" : "Открыть";
 }
 
-function postButtonMarkup(postId: string, type: FeedPostType) {
-  const url = openPostUrl(postId);
+function postButtonMarkup(postId: string, slug: string, type: FeedPostType) {
+  const url = openPostUrl(postId, slug);
   return [[{ text: buttonLabel(type), url }]];
 }
 
@@ -71,11 +71,12 @@ async function resolvePhotoUploads(postId: string): Promise<PostUploadFile[]> {
 async function sendChannelPost(
   channelId: string,
   postId: string,
+  slug: string,
   type: FeedPostType,
   caption: string,
   photos: PostUploadFile[],
 ): Promise<number> {
-  const keyboard = postButtonMarkup(postId, type);
+  const keyboard = postButtonMarkup(postId, slug, type);
   const parseMode = "HTML" as const;
 
   if (photos.length === 0) {
@@ -141,6 +142,7 @@ export async function publishFeedPostToTelegramChannel(
       const messageId = await sendChannelPost(
         channelId,
         post.id,
+        post.slug,
         post.type,
         caption,
         photos,

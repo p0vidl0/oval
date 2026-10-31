@@ -1,10 +1,5 @@
 import { db } from "@/lib/db/client";
-import {
-  feedPosts,
-  payments,
-  registrations,
-  trainingSessions,
-} from "@/lib/db/schema";
+import { payments, registrations, trainingSessions } from "@/lib/db/schema";
 import { account, user } from "@/lib/db/schema/auth-schema";
 
 async function insertUser(params: {
@@ -47,7 +42,8 @@ async function seedSessionWithRegistrations(options: {
     status: "scheduled",
     onlinePaymentEnabled: true,
   });
-  await db.insert(feedPosts).values({
+  const { insertFeedPost } = await import("@/tests/helpers/insert-feed-post");
+  await insertFeedPost({
     id: postId,
     type: "training_announcement",
     title: options.title,
@@ -302,7 +298,8 @@ export async function seedE2eScenario(
       paymentState: "due",
     });
     const postId = `e2e-today-post-${suffix}`;
-    await db.insert(feedPosts).values({
+    const { insertFeedPost } = await import("@/tests/helpers/insert-feed-post");
+    await insertFeedPost({
       id: postId,
       type: "training_announcement",
       title: sessionTitle,
@@ -402,4 +399,25 @@ export async function seedE2eScenario(
     targetSearch,
     sourceSearch,
   };
+}
+
+/** Опубликованная новость с предсказуемым днём slug (для e2e корневого URL). */
+export async function seedFeedPostPublicUrlE2e(runId: string) {
+  if (!process.env.DATABASE_URL?.trim()) {
+    throw new Error("DATABASE_URL is required for e2e seed helpers");
+  }
+  const suffix = runId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 32);
+  const postId = `e2e-slug-${suffix}`;
+  const title = `E2E Public URL ${suffix}`;
+  const publishedAt = new Date("2024-07-01T18:00:00+06:00");
+  const { insertFeedPost } = await import("@/tests/helpers/insert-feed-post");
+  const postSlug = await insertFeedPost({
+    id: postId,
+    type: "news",
+    title,
+    body: "e2e slug route",
+    status: "published",
+    publishedAt,
+  });
+  return { postId, postSlug, title };
 }

@@ -11,11 +11,13 @@ import { FeedCardTitle } from "@/components/nl/feed-card/feed-card-title";
 import { resolveFeedCardMedia } from "@/components/nl/feed-card/resolve-media";
 import { FeedCardTrainingProgress } from "@/components/nl/feed-card/training-progress";
 import type { FeedCardProps } from "@/components/nl/feed-card/types";
+import { postPath } from "@/lib/feed/open-post-url";
 import { formatTimeHm, formatTimeRange } from "@/lib/format/datetime";
 
 export function AnnouncementFeedCard(props: FeedCardProps) {
   const {
     postId,
+    postSlug,
     type,
     title,
     body,
@@ -77,7 +79,7 @@ export function AnnouncementFeedCard(props: FeedCardProps) {
           ) : null}
           <div className="nl-card__text">
             <FeedCardTitle
-              postId={postId}
+              postSlug={postSlug}
               title={title}
               linkTitle={linkTitle}
             />
@@ -104,7 +106,9 @@ export function AnnouncementFeedCard(props: FeedCardProps) {
             {training ? (
               <FeedCardTrainingProgress
                 training={training}
-                href={linkTitle && !previewMode ? `/feed/${postId}` : undefined}
+                href={
+                  linkTitle && !previewMode ? postPath(postSlug) : undefined
+                }
               />
             ) : null}
           </div>

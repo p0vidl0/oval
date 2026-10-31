@@ -1,18 +1,19 @@
 import Link from "next/link";
+import { postPath } from "@/lib/feed/open-post-url";
 
 export function FeedCardTitle({
-  postId,
+  postSlug,
   title,
   linkTitle,
 }: {
-  postId: string;
+  postSlug: string;
   title: string;
   linkTitle: boolean;
 }) {
   if (linkTitle) {
     return (
       <Link
-        href={`/feed/${postId}`}
+        href={postPath(postSlug)}
         style={{ color: "inherit", textDecoration: "none" }}
       >
         <h2 className="nl-display nl-card__title">{title}</h2>

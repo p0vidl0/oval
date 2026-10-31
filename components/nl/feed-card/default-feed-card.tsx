@@ -13,6 +13,7 @@ import type { FeedCardProps } from "@/components/nl/feed-card/types";
 export function DefaultFeedCard(props: FeedCardProps) {
   const {
     postId,
+    postSlug,
     type,
     title,
     body,
@@ -59,7 +60,7 @@ export function DefaultFeedCard(props: FeedCardProps) {
             ) : null}
             <div className="nl-card__text">
               <FeedCardTitle
-                postId={postId}
+                postSlug={postSlug}
                 title={title}
                 linkTitle={linkTitle}
               />

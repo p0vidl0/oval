@@ -13,6 +13,7 @@ import {
 } from "@/lib/feed/feed-live-card";
 import type { FeedFilterKey } from "@/lib/feed/filter";
 import { postMatchesFilter } from "@/lib/feed/filter";
+import { postPath } from "@/lib/feed/open-post-url";
 import type { FeedRealtimeEvent } from "@/lib/realtime/feed-event-bus";
 
 type Props = {
@@ -120,7 +121,7 @@ function patchActiveCount(
       canRegister,
       registerHref:
         !isLoggedIn && canRegister
-          ? `/login?next=/feed/${card.postId}`
+          ? `/login?next=${encodeURIComponent(postPath(card.postSlug))}`
           : undefined,
     },
   };
@@ -278,6 +279,7 @@ export function FeedLiveList({
                   <FeedRegisterButton
                     sessionId={card.training.sessionId}
                     postId={card.postId}
+                    postSlug={card.postSlug}
                     needsName={needsName}
                     onSuccess={({ registrationId, needsPayment }) =>
                       handleRegisterSuccess(

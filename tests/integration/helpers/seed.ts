@@ -1,6 +1,5 @@
 import { db } from "@/lib/db/client";
 import {
-  feedPosts,
   payments,
   registrations,
   trainingSessions,
@@ -49,7 +48,8 @@ export async function seedPublishedAnnouncement(options?: {
     onlinePaymentEnabled: options?.onlinePaymentEnabled ?? true,
   });
 
-  await db.insert(feedPosts).values({
+  const { insertFeedPost } = await import("@/tests/helpers/insert-feed-post");
+  await insertFeedPost({
     id: postId,
     type: "training_announcement",
     title: options?.title ?? "Integration test session",

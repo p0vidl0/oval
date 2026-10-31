@@ -40,6 +40,7 @@ export const feedPosts = pgTable(
   "feed_posts",
   {
     id: text("id").primaryKey(),
+    slug: text("slug").notNull(),
     type: feedPostTypeEnum("type").notNull(),
     title: text("title").notNull(),
     body: text("body").notNull().default(""),
@@ -75,6 +76,7 @@ export const feedPosts = pgTable(
     uniqueIndex("feed_posts_session_announcement_uidx")
       .on(table.relatedSessionId)
       .where(sql`${table.type} = 'training_announcement'`),
+    uniqueIndex("feed_posts_slug_uidx").on(table.slug),
   ],
 );
 

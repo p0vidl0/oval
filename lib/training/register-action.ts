@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { recordServerEvent } from "@/lib/analytics/record-event";
 import { applyRegistrationEffects } from "@/lib/app/effects";
 import { getServerSession } from "@/lib/auth/session";
+import { postPath } from "@/lib/feed/open-post-url";
+import { getFeedPostById } from "@/lib/feed/queries";
 import { registerUserForSession } from "@/lib/training/registrations";
 
 export type RegisterForTrainingResult =
@@ -20,9 +22,13 @@ export async function registerForTrainingClient(
   feedPostId: string,
 ): Promise<RegisterForTrainingResult> {
   const session = await getServerSession();
+  const post = feedPostId ? await getFeedPostById(feedPostId) : null;
+  const postPublicPath = post ? postPath(post.slug) : null;
   if (!session) {
     redirect(
-      feedPostId ? `/login?next=/feed/${feedPostId}` : "/login?next=/feed",
+      postPublicPath
+        ? `/login?next=${encodeURIComponent(postPublicPath)}`
+        : "/login?next=/feed",
     );
   }
 
@@ -36,7 +42,7 @@ export async function registerForTrainingClient(
 
   await recordServerEvent({
     name: "registration_complete",
-    path: feedPostId ? `/feed/${feedPostId}` : "/feed",
+    path: postPublicPath ?? "/feed",
     props: {
       registrationId: result.registrationId,
       sessionId: result.sessionId,

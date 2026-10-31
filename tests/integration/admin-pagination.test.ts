@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { db } from "@/lib/db/client";
-import { feedPosts, user } from "@/lib/db/schema";
+import { user } from "@/lib/db/schema";
 import { listAllFeedPostsForAdmin } from "@/lib/feed/queries";
 import {
   listAdminSessions,
@@ -40,15 +40,16 @@ run("admin pagination", () => {
   });
 
   it("posts: filter and pagination together", async () => {
+    const { insertFeedPost } = await import("@/tests/helpers/insert-feed-post");
     for (let i = 0; i < 13; i++) {
-      await db.insert(feedPosts).values({
+      await insertFeedPost({
         id: `draft-${i}`,
         type: "news",
         title: `Draft ${i}`,
         createdAt: new Date(Date.now() - i * 1000),
       });
     }
-    await db.insert(feedPosts).values({
+    await insertFeedPost({
       id: "live",
       type: "news",
       title: "Live",

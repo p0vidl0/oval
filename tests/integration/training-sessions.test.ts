@@ -651,8 +651,9 @@ run("training sessions", () => {
 
   it("only one announcement per training", async () => {
     const { sessionId } = await seedPublishedAnnouncement();
+    const { insertFeedPost } = await import("@/tests/helpers/insert-feed-post");
     await expect(
-      db.insert(feedPosts).values({
+      insertFeedPost({
         id: crypto.randomUUID(),
         type: "training_announcement",
         title: "Второй анонс",

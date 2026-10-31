@@ -9,7 +9,7 @@ import type { FeedFilterKey } from "@/lib/feed/filter";
 import { typesForFilter } from "@/lib/feed/filter";
 import { listImagesForPosts } from "@/lib/feed/post-images";
 import {
-  getLiveAnnouncementIdsBySession,
+  getLiveAnnouncementsBySession,
   getSessionsByIds,
   listPublishedFeedPosts,
 } from "@/lib/feed/queries";
@@ -32,7 +32,7 @@ export async function loadFeedLiveCards(
     posts.flatMap((p) => (p.relatedSessionId ? [p.relatedSessionId] : [])),
   );
   const sessionById = new Map(sessions.map((s) => [s.id, s]));
-  const announcementBySession = await getLiveAnnouncementIdsBySession(
+  const announcementBySession = await getLiveAnnouncementsBySession(
     sessions.map((s) => s.id),
   );
 
@@ -85,8 +85,8 @@ export async function loadFeedLiveCards(
         userRegistration: userReg
           ? { id: userReg.id, paymentState: userReg.paymentState }
           : null,
-        announcementPostId: training
-          ? announcementBySession.get(training.id)
+        announcementPostSlug: training
+          ? (announcementBySession.get(training.id)?.slug ?? null)
           : null,
         userNote:
           session && training && post.type !== "training_announcement"

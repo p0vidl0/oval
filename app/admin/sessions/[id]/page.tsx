@@ -24,6 +24,7 @@ import { defaultTrainingCancellationBody } from "@/lib/admin/training-session-co
 import { can } from "@/lib/auth/capabilities";
 import { getServerSession } from "@/lib/auth/session";
 import { attendanceMoments } from "@/lib/domain/attendance/rules";
+import { postPath } from "@/lib/feed/open-post-url";
 import { isPostLive } from "@/lib/feed/publication";
 import {
   formatDateInput,
@@ -128,7 +129,7 @@ export default async function AdminSessionPage({
               <>
                 {isPostLive(announcement, now) ? (
                   <Link
-                    href={`/feed/${announcement.id}`}
+                    href={postPath(announcement.slug)}
                     className="nl-button"
                     target="_blank"
                     rel="noopener noreferrer"

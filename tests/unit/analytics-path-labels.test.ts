@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   feedPostIdFromAnalyticsPath,
+  feedPostSlugFromAnalyticsPath,
   labelForAnalyticsPath,
   STATIC_ANALYTICS_PATH_LABELS,
 } from "@/lib/analytics/path-labels";
@@ -16,6 +17,16 @@ describe("feedPostIdFromAnalyticsPath", () => {
     expect(feedPostIdFromAnalyticsPath("/feed")).toBeNull();
     expect(feedPostIdFromAnalyticsPath("/feed/not-a-uuid")).toBeNull();
     expect(feedPostIdFromAnalyticsPath("/login")).toBeNull();
+  });
+});
+
+describe("feedPostSlugFromAnalyticsPath", () => {
+  it("reads root and legacy slug paths", () => {
+    expect(feedPostSlugFromAnalyticsPath("/2026-10-31")).toBe("2026-10-31");
+    expect(feedPostSlugFromAnalyticsPath("/2026-10-31-2")).toBe("2026-10-31-2");
+    expect(feedPostSlugFromAnalyticsPath("/feed/2026-10-31")).toBe(
+      "2026-10-31",
+    );
   });
 });
 
@@ -38,6 +49,11 @@ describe("labelForAnalyticsPath", () => {
   it("falls back to path when post title missing", () => {
     const path = `/feed/${POST_ID}`;
     expect(labelForAnalyticsPath(path, new Map())).toBe(path);
+  });
+
+  it("uses slug map keys for root post paths", () => {
+    const titles = new Map([["slug:2026-10-31", "Новость дня"]]);
+    expect(labelForAnalyticsPath("/2026-10-31", titles)).toBe("Новость дня");
   });
 
   it("falls back to path for unknown routes", () => {

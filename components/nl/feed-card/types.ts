@@ -31,6 +31,7 @@ export type FeedCardActions = {
 
 export type FeedCardProps = {
   postId: string;
+  postSlug: string;
   type: FeedPostType;
   title: string;
   body: string;

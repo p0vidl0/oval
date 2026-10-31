@@ -5,6 +5,7 @@ import { PublicationEditor } from "@/components/admin/publication-editor";
 import { BackLink } from "@/components/nl/ui";
 import { updatePublication } from "@/lib/admin/feed-actions";
 import { isTelegramChannelPublishConfigured } from "@/lib/bots/telegram/channel-config";
+import { postPath } from "@/lib/feed/open-post-url";
 import { listImagesForPost } from "@/lib/feed/post-images";
 import { isPostLive, isPostScheduled } from "@/lib/feed/publication";
 import { getFeedPostById, getTrainingSessionForPost } from "@/lib/feed/queries";
@@ -133,7 +134,7 @@ export default async function AdminPostDetailPage({
       >
         {isPostLive(post, now) ? (
           <Link
-            href={`/feed/${post.id}`}
+            href={postPath(post.slug)}
             className="nl-button"
             target="_blank"
             rel="noopener noreferrer"

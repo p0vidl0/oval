@@ -17,7 +17,8 @@ import { useIntegrationDb } from "./helpers/setup";
 const run = process.env.OVAL_INTEGRATION === "1" ? describe : describe.skip;
 
 async function seedNews(id: string, publishedAt: Date, pinned = false) {
-  await db.insert(feedPosts).values({
+  const { insertFeedPost } = await import("@/tests/helpers/insert-feed-post");
+  await insertFeedPost({
     id,
     type: "news",
     title: id,

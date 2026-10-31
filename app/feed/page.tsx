@@ -12,6 +12,7 @@ import { getServerSession } from "@/lib/auth/session";
 import { describeRegistration } from "@/lib/domain/registration/describe";
 import { FEED_FILTERS, type FeedFilterKey } from "@/lib/feed/filter";
 import { loadFeedLiveCards } from "@/lib/feed/load-feed-live-cards";
+import { postPath } from "@/lib/feed/open-post-url";
 import { listUpcomingScheduledSessions } from "@/lib/feed/queries";
 import { formatShortListDate, formatTimeHm } from "@/lib/format/datetime";
 import { siteDefaultDescription } from "@/lib/site/public-origin";
@@ -62,7 +63,7 @@ function buildUpcomingItems(
     const reg = mine.get(tr.id);
     items.set(tr.id, {
       sessionId: tr.id,
-      href: `/feed/${post.id}`,
+      href: postPath(post.slug),
       startsAt: tr.startsAt,
       title: tr.title,
       status: reg
@@ -73,13 +74,13 @@ function buildUpcomingItems(
       tone: reg ? "mine" : tr.registrationEnabled ? "open" : "muted",
     });
   }
-  for (const { registration, session: tr, announcementPostId } of myRegs) {
+  for (const { registration, session: tr, announcementPostSlug } of myRegs) {
     if (items.has(tr.id) || tr.startsAt < now || tr.status !== "scheduled") {
       continue;
     }
     items.set(tr.id, {
       sessionId: tr.id,
-      href: announcementPostId ? `/feed/${announcementPostId}` : "/cabinet",
+      href: announcementPostSlug ? postPath(announcementPostSlug) : "/cabinet",
       startsAt: tr.startsAt,
       title: tr.title,
       status: registrationStatusText(registration, tr),
@@ -180,12 +181,12 @@ export default async function FeedPage({ searchParams }: Props) {
                   {myRegs
                     .slice(0, 4)
                     .map(
-                      ({ registration, session: tr, announcementPostId }) => (
+                      ({ registration, session: tr, announcementPostSlug }) => (
                         <li key={registration.id} className="nl-mono data-sm">
                           <Link
                             href={
-                              announcementPostId
-                                ? `/feed/${announcementPostId}`
+                              announcementPostSlug
+                                ? postPath(announcementPostSlug)
                                 : "/cabinet"
                             }
                             className="nl-aside-link"
@@ -223,7 +224,7 @@ export default async function FeedPage({ searchParams }: Props) {
               >
                 {upcomingWeek.map(({ session: tr, post }) => (
                   <li key={tr.id} style={{ marginBottom: "var(--space-2)" }}>
-                    <Link href={`/feed/${post.id}`} className="nl-aside-link">
+                    <Link href={postPath(post.slug)} className="nl-aside-link">
                       {formatShortListDate(tr.startsAt)} ·{" "}
                       {formatTimeHm(tr.startsAt)}
                       {tr.status === "cancelled" ? (

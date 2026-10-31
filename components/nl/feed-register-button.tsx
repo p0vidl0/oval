@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { NamePromptDialog } from "@/components/nl/name-prompt-dialog";
 import { trackAnalyticsEvent } from "@/lib/analytics/client-track";
+import { postPath } from "@/lib/feed/open-post-url";
 import { registerForTrainingClient } from "@/lib/training/register-action";
 
 type Props = {
   sessionId: string;
   postId: string;
+  postSlug: string;
   /** У пользователя нет имени — перед записью спросить «Как вас записать?». */
   needsName?: boolean;
   onSuccess: (result: {
@@ -21,9 +23,11 @@ type Props = {
 export function FeedRegisterButton({
   sessionId,
   postId,
+  postSlug,
   needsName = false,
   onSuccess,
 }: Props) {
+  const publicPath = postPath(postSlug);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +67,7 @@ export function FeedRegisterButton({
         aria-busy={pending}
         onClick={() => {
           trackAnalyticsEvent("register_click", {
-            path: `/feed/${postId}`,
+            path: publicPath,
             props: { postId, sessionId },
           });
           if (needsName && !nameSaved) {

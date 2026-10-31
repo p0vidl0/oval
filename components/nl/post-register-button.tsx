@@ -7,6 +7,7 @@ import { FeedRegisterButton } from "@/components/nl/feed-register-button";
 export function PostRegisterButton(props: {
   sessionId: string;
   postId: string;
+  postSlug: string;
   needsName: boolean;
 }) {
   const router = useRouter();
