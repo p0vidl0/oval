@@ -36,6 +36,7 @@ pnpm run task -- test-integration   # стек oval-integration + vitest
 | `pnpm run task -- help` | Все dev/test команды |
 | `pnpm run dev` | Next.js (без compose env — используй `task dev`) |
 | `pnpm run lint` | Biome check |
+| Git pre-commit | Lefthook → lint + typecheck + unit (`pnpm run precommit`) |
 | `pnpm run build` | Production build |
 | `pnpm run auth:generate` | Better Auth Drizzle schema |
 | `pnpm run db:migrate` | Migrations (нужен `DATABASE_URL`) |

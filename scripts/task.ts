@@ -31,6 +31,7 @@ oval task runner — pnpm run task -- <command>
   db-migrate [project]     drizzle-kit migrate for project DATABASE_URL
   validate                 lint + build
   validate-full            validate + test:unit
+  precommit                lint + typecheck + test:unit (git hook)
   test-all                 test:unit + test-integration
   test-manual              validate + test-all + test-e2e
   test-integration         Isolated oval-integration stack + vitest integration
@@ -302,6 +303,12 @@ function validateFull(): number {
   return runPnpmRun("test:unit");
 }
 
+function precommit(): number {
+  if (runPnpmRun("lint") !== 0) return 1;
+  if (runPnpmRun("typecheck") !== 0) return 1;
+  return runPnpmRun("test:unit");
+}
+
 function testAll(): number {
   if (runPnpmRun("test:unit") !== 0) return 1;
   return testIntegration();
@@ -411,6 +418,7 @@ function main(): number {
     "db-migrate": () => dbMigrate(resolveProject(arg, PROJECT_DEV)),
     validate: () => validate(),
     "validate-full": () => validateFull(),
+    precommit: () => precommit(),
     "test-all": () => testAll(),
     "test-manual": () => testManual(),
     "test-integration": () => testIntegration(),

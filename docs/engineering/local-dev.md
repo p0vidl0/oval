@@ -39,6 +39,21 @@ Secrets: [`.docker/env/oval-dev.local.env`](../../.docker/env/oval-dev.local.env
 
 Host-only tools (lint, unit tests) still use **pnpm on the host** with root `.env` or rendered env as today.
 
+## Git hooks (Lefthook)
+
+После `pnpm install` ставится **pre-commit**: lint → `tsc --noEmit` → unit tests (без production build). Конфиг: [`lefthook.yml`](../../lefthook.yml).
+
+```bash
+pnpm run precommit           # то же вручную
+pnpm run task -- validate-full  # как CI: lint + build + unit
+pnpm exec lefthook install   # вручную, если prepare не сработал
+LEFTHOOK=0 git commit -m "…" # один раз без хуков
+```
+
+Коммит из **Cursor / VS Code**: `prepare` → [`scripts/lefthook-install.sh`](../../scripts/lefthook-install.sh): PATH/nvm ([`scripts/git-hook-env.sh`](../../scripts/git-hook-env.sh)), нативный `lefthook` без node; лишние обёртки (`prepare-commit-msg`, …) удаляются, если в [`lefthook.yml`](../../lefthook.yml) нет секции. Node: [`.nvmrc`](../../.nvmrc). После сбоев: `bash scripts/lefthook-install.sh`.
+
+Integration/e2e в pre-commit не входят — только `pnpm run task -- test-integration` / `test-e2e` вручную или в CI.
+
 ## Integration tests
 
 ```bash

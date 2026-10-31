@@ -1,0 +1,12 @@
+# Pre-commit: lint → tsc --noEmit → unit tests (без production build).
+# Полная проверка как в CI: pnpm run task -- validate-full
+# Skip once: LEFTHOOK=0 git commit …
+
+min_version: 1.6.0
+rc_file: scripts/git-hook-env.sh
+
+pre-commit:
+  parallel: false
+  commands:
+    precommit:
+      run: bash scripts/git-hook-run.sh pnpm run precommit
