@@ -5,6 +5,7 @@ import { AnalyticsConsentBanner } from "@/components/analytics/analytics-consent
 import { AnalyticsScripts } from "@/components/analytics/analytics-scripts";
 import { TelegramMiniAppProvider } from "@/components/telegram/telegram-mini-app-provider";
 import { isOvalAnalyticsEnabled } from "@/lib/analytics/config";
+import { analyticsConsentBootstrapScript } from "@/lib/analytics/consent";
 import { AnalyticsConsentProvider } from "@/lib/analytics/consent-context";
 import { getYandexMetrikaCounterId } from "@/lib/analytics/yandex-metrika";
 import { fontVariables } from "@/lib/fonts";
@@ -51,8 +52,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     ovalAnalyticsEnabled || yandexMetrikaCounterId !== null;
 
   return (
-    <html lang="ru" className={`${fontVariables} h-full`}>
+    <html
+      lang="ru"
+      className={`${fontVariables} h-full`}
+      suppressHydrationWarning
+    >
       <body className="nl-root flex min-h-full flex-col">
+        {showAnalyticsUi ? (
+          <script id="analytics-consent-bootstrap" blocking="render">
+            {analyticsConsentBootstrapScript()}
+          </script>
+        ) : null}
         <AnalyticsConsentProvider>
           {showAnalyticsUi ? <AnalyticsConsentBanner /> : null}
           {showAnalyticsUi ? (

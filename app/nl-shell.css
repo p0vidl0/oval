@@ -1683,6 +1683,12 @@ select.nl-input {
   margin: 0 auto;
 }
 
+/* Выбор уже в localStorage: атрибут ставит скрипт в head, баннер не мигает до гидрации. */
+html[data-analytics-consent="granted"] .nl-analytics-consent,
+html[data-analytics-consent="denied"] .nl-analytics-consent {
+  display: none;
+}
+
 .nl-analytics-consent__inner {
   display: flex;
   flex-direction: column;

@@ -1,6 +1,8 @@
 export type AnalyticsConsent = "granted" | "denied";
 
 export const ANALYTICS_CONSENT_STORAGE_KEY = "oval_analytics_consent";
+/** Set on `<html>` before paint so a stored decision does not flash the banner. */
+export const ANALYTICS_CONSENT_DOCUMENT_ATTR = "data-analytics-consent";
 export const ANALYTICS_UTM_SESSION_KEY = "oval_analytics_utm";
 
 export function parseAnalyticsConsent(
@@ -31,4 +33,11 @@ export function writeAnalyticsConsentToStorage(value: AnalyticsConsent): void {
   } catch {
     // ignore quota / private mode
   }
+}
+
+/** Blocking inline script: runs while HTML is parsed, before the banner paints. */
+export function analyticsConsentBootstrapScript(): string {
+  const key = JSON.stringify(ANALYTICS_CONSENT_STORAGE_KEY);
+  const attr = JSON.stringify(ANALYTICS_CONSENT_DOCUMENT_ATTR);
+  return `(function(){try{var v=localStorage.getItem(${key});if(v==="granted"||v==="denied"){document.documentElement.setAttribute(${attr},v);}}catch(e){}})();`;
 }

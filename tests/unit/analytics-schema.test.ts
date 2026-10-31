@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  ANALYTICS_CONSENT_DOCUMENT_ATTR,
   ANALYTICS_CONSENT_STORAGE_KEY,
+  analyticsConsentBootstrapScript,
   parseAnalyticsConsent,
   readAnalyticsConsentFromStorage,
   writeAnalyticsConsentToStorage,
@@ -67,6 +69,46 @@ describe("utmFromSearchParams", () => {
       utmContent: undefined,
       utmTerm: undefined,
     });
+  });
+});
+
+describe("analyticsConsentBootstrapScript", () => {
+  function run(stored: string | null, broken = false) {
+    const attrs = new Map<string, string>();
+    const localStorage = {
+      getItem() {
+        if (broken) throw new Error("denied");
+        return stored;
+      },
+    };
+    const document = {
+      documentElement: {
+        setAttribute(name: string, value: string) {
+          attrs.set(name, value);
+        },
+      },
+    };
+    const fn = new Function(
+      "localStorage",
+      "document",
+      analyticsConsentBootstrapScript(),
+    );
+    fn(localStorage, document);
+    return attrs;
+  }
+
+  it("marks a stored decision before paint", () => {
+    expect(run("granted").get(ANALYTICS_CONSENT_DOCUMENT_ATTR)).toBe("granted");
+    expect(run("denied").get(ANALYTICS_CONSENT_DOCUMENT_ATTR)).toBe("denied");
+  });
+
+  it("leaves the banner visible when there is no decision", () => {
+    expect(run(null).size).toBe(0);
+    expect(run("nope").size).toBe(0);
+  });
+
+  it("ignores storage failures", () => {
+    expect(run(null, true).size).toBe(0);
   });
 });
 
