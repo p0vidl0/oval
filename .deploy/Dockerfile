@@ -9,7 +9,8 @@ ARG PNPM_VERSION
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-RUN pnpm install --frozen-lockfile
+# prepare (`lefthook install`) нужен git-репозиторий; в образе хуков нет.
+RUN npm pkg delete scripts.prepare && pnpm install --frozen-lockfile
 
 FROM deps AS builder
 ARG SERVER_ACTION_BODY_SIZE_LIMIT
