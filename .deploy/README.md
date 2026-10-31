@@ -8,7 +8,7 @@
 |------|----------|
 | `config.env` | репозиторий [`.deploy/config.env`](config.env) — домен, Traefik, SMTP-хост, публичные URL |
 | `secrets.env` | генерируется в CI при каждом деплое |
-| `.env` | на деплое: `cat config.env secrets.env` — подстановки `${OVAL_*}` для docker-compose 1.27 |
+| `.env` | на деплое: `cat config.env secrets.env` — подстановки `${OVAL_*}` для `docker compose` |
 | `docker-compose.yaml` | репозиторий |
 | `data/uploads/` | том: загруженные изображения постов (`/app/data/uploads` в контейнере) |
 
@@ -44,7 +44,7 @@ Mini App URL в BotFather — публичный `https://<OVAL_DOMAIN>/feed` (�
 
 ## Подготовка сервера (чеклист)
 
-1. **Пользователь и каталог** — пользователь `oval`, каталог `SSH_PATH`, ключ деплоя, доступ к Docker.
+1. **Пользователь и каталог** — пользователь `oval`, каталог `SSH_PATH`, ключ деплоя, Docker с плагином **Compose V2** (`docker compose`, не отдельный `docker-compose`).
 2. **Postgres** — пользователь/БД `oval`, хост `postgres:5432` в сети `theta-brige`.
 3. **`data/uploads`** — создаётся при деплое; persistence загрузок между пересозданиями контейнера.
 4. **Traefik** — та же external-сеть, что у omsk-bike (`TRAEFIK_NETWORK` в `config.env`).

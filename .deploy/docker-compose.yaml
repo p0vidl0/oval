@@ -1,4 +1,4 @@
-# VPS: Traefik (external) → Next.js. docker-compose 1.27 on server (omsk-bike).
+# VPS: Traefik (external) → Next.js. На сервере: `docker compose` (Compose V2).
 version: "3.7"
 
 services:

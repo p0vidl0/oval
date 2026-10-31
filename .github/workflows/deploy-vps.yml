@@ -131,5 +131,5 @@ jobs:
             cd '${REMOTE_DIR}'
             mkdir -p data/uploads
             cat config.env secrets.env > .env
-            docker-compose -f docker-compose.yaml pull
-            docker-compose -f docker-compose.yaml up -d"
+            docker compose -f docker-compose.yaml pull
+            docker compose -f docker-compose.yaml up -d"
