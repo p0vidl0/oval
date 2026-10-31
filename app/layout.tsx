@@ -23,6 +23,20 @@ export const metadata: Metadata = {
     template: `%s · ${siteName}`,
   },
   description: siteDefaultDescription,
+  icons: {
+    icon: [
+      {
+        url: "/icon.png",
+        type: "image/png",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/icon-light.png",
+        type: "image/png",
+        media: "(prefers-color-scheme: dark)",
+      },
+    ],
+  },
   openGraph: {
     siteName,
     locale: "ru_RU",
