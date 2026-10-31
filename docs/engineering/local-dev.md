@@ -50,7 +50,7 @@ pnpm exec lefthook install   # вручную, если prepare не срабо�
 LEFTHOOK=0 git commit -m "…" # один раз без хуков
 ```
 
-Коммит из **Cursor / VS Code**: `prepare` → [`scripts/lefthook-install.sh`](../../scripts/lefthook-install.sh): PATH/nvm ([`scripts/git-hook-env.sh`](../../scripts/git-hook-env.sh)), нативный `lefthook` без node; лишние обёртки (`prepare-commit-msg`, …) удаляются, если в [`lefthook.yml`](../../lefthook.yml) нет секции. Node: [`.nvmrc`](../../.nvmrc). После сбоев: `bash scripts/lefthook-install.sh`.
+Коммит из **Cursor / VS Code**: в [`lefthook.yml`](../../lefthook.yml) заданы `lefthook: bash scripts/lefthook-bin.sh` (нативный бинарник без node/pnpm) и `rc: scripts/git-hook-env.sh` (PATH/nvm). Хук `prepare-commit-msg` lefthook ставит всегда, но с тем же `lefthook:` не требует node. Node: [`.nvmrc`](../../.nvmrc). Переустановка хуков: `pnpm exec lefthook install`.
 
 Integration/e2e в pre-commit не входят — только `pnpm run task -- test-integration` / `test-e2e` вручную или в CI.
 

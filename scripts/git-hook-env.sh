@@ -1,7 +1,7 @@
-# Sourced by Lefthook (rc_file) and git-hook-run.sh. Git из GUI (Cursor) часто не видит node/pnpm.
+# Sourced из git-хуков lefthook (ключ rc). GUI Git (Cursor) часто не видит node/pnpm.
 # shellcheck shell=bash
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
 export PATH="${ROOT}/node_modules/.bin:/opt/homebrew/bin:/usr/local/bin:${PATH}"
 
 if [ -d "${HOME}/.volta" ]; then

@@ -20,7 +20,7 @@
     "test:integration": "vitest run tests/integration",
     "test:unit": "vitest run tests/unit",
     "test:e2e": "playwright test",
-    "prepare": "bash scripts/lefthook-install.sh"
+    "prepare": "lefthook install"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "^1.7.7",
