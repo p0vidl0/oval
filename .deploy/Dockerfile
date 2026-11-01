@@ -1,10 +1,9 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 # Production image for VPS (build context: repo root).
 
-ARG NODE_VERSION=24.21.0
 ARG PNPM_VERSION=12.9.1
 
-FROM node:${NODE_VERSION}-bookworm-slim AS deps
+FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS deps
 ARG PNPM_VERSION
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
@@ -21,7 +20,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm run build
 
-FROM node:${NODE_VERSION}-bookworm-slim AS runner
+FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS runner
 ARG GIT_COMMIT=unknown
 
 WORKDIR /app
