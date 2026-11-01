@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { TrainingStatusBadge } from "@/components/admin/admin-badges";
 import { RefreshAt } from "@/components/admin/refresh-at";
@@ -20,6 +21,7 @@ import {
   formatTimeHm,
   formatTimeRange,
 } from "@/lib/format/datetime";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
 import {
   type AdminSessionRow,
   listAttentionSessions,
@@ -29,6 +31,10 @@ import {
   unmarkedCount,
 } from "@/lib/training/admin-queries";
 import { trainingDisplayStatus } from "@/lib/training/status";
+
+export const metadata: Metadata = {
+  title: { absolute: pageDocumentTitle("Сегодня") },
+};
 
 /** Данные на момент запроса: страницу нельзя собрать заранее при build. */
 export const dynamic = "force-dynamic";

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   getAnalyticsFunnel,
@@ -8,6 +9,11 @@ import {
   getUtmBreakdown,
   parseAnalyticsPeriodDays,
 } from "@/lib/analytics/queries";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
+
+export const metadata: Metadata = {
+  title: { absolute: pageDocumentTitle("Статистика") },
+};
 
 type Props = {
   searchParams: Promise<{ days?: string }>;

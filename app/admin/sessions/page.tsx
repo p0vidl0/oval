@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   PostStatusBadge,
@@ -13,6 +14,7 @@ import {
   formatShortListDate,
   formatTimeHm,
 } from "@/lib/format/datetime";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
 import {
   ADMIN_SESSION_SCOPES,
   type AdminSessionScope,
@@ -20,6 +22,10 @@ import {
   sessionNeedsAttention,
 } from "@/lib/training/admin-queries";
 import { trainingDisplayStatus } from "@/lib/training/status";
+
+export const metadata: Metadata = {
+  title: { absolute: pageDocumentTitle("Расписание") },
+};
 
 type Props = {
   searchParams: Promise<{ scope?: string; page?: string; size?: string }>;

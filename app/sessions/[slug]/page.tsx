@@ -5,6 +5,7 @@ import {
   loadPublicDatedPost,
   metadataForPublicPost,
 } from "@/lib/feed/public-dated-post";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -14,7 +15,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = await loadPublicDatedPost(slug, "session");
-  if (!post) return { title: "Не найдено" };
+  if (!post) return { title: { absolute: pageDocumentTitle("Не найдено") } };
   return metadataForPublicPost(post);
 }
 

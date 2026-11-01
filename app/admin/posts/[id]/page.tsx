@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminBanner, PostStatusBadge } from "@/components/admin/admin-badges";
@@ -15,12 +16,23 @@ import {
   formatShortListDate,
   formatTimeHm,
 } from "@/lib/format/datetime";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
 import { uploadPublicUrl } from "@/lib/uploads/storage";
 
 type Props = {
   params: Promise<{ id: string }>;
   searchParams: Promise<{ done?: string; error?: string }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const post = await getFeedPostById(id);
+  return {
+    title: {
+      absolute: pageDocumentTitle(post?.title.trim() || "Редактирование"),
+    },
+  };
+}
 
 const DONE_MESSAGES: Record<string, string> = {
   created: "Публикация создана.",

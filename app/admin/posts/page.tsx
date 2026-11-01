@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PostStatusBadge } from "@/components/admin/admin-badges";
 import { ClickableRow } from "@/components/admin/clickable-row";
@@ -15,6 +16,11 @@ import {
   formatShortListDate,
   formatTimeHm,
 } from "@/lib/format/datetime";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
+
+export const metadata: Metadata = {
+  title: { absolute: pageDocumentTitle("Публикации") },
+};
 
 type Props = {
   searchParams: Promise<{ status?: string; page?: string; size?: string }>;

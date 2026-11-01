@@ -35,3 +35,20 @@ export function metaDescriptionFromBody(
 
 export const siteDefaultDescription = DEFAULT_META_DESCRIPTION;
 export const siteName = "Ночная лига";
+
+/** Текст `<title>` главной и суффикс остальных страниц. */
+export const siteDocumentTitle = "Ночная Лига";
+
+/** Сегмент заголовка вкладки: первая буква заглавная. */
+export function capitalizePageTitle(page: string): string {
+  const trimmed = page.trim();
+  if (!trimmed) return "";
+  return trimmed.charAt(0).toLocaleUpperCase("ru-RU") + trimmed.slice(1);
+}
+
+/** `<title>`: «Страница | Ночная Лига». Пустой сегмент — только название сайта. */
+export function pageDocumentTitle(page: string): string {
+  const segment = capitalizePageTitle(page);
+  if (!segment) return siteDocumentTitle;
+  return `${segment} | ${siteDocumentTitle}`;
+}

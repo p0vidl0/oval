@@ -12,6 +12,7 @@ import { fontVariables } from "@/lib/fonts";
 import {
   getSiteMetadataBase,
   siteDefaultDescription,
+  siteDocumentTitle,
   siteName,
 } from "@/lib/site/public-origin";
 import { telegramLaunchCaptureScript } from "@/lib/telegram/mini-app-launch";
@@ -20,8 +21,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: getSiteMetadataBase(),
   title: {
-    default: siteName,
-    template: `%s · ${siteName}`,
+    default: siteDocumentTitle,
+    template: `%s | ${siteDocumentTitle}`,
   },
   description: siteDefaultDescription,
   icons: {

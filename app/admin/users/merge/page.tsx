@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { UserMergeForm } from "@/components/admin/user-merge-form";
 import { ADMIN_HOME } from "@/lib/admin/routes";
 import { can } from "@/lib/auth/capabilities";
 import { getServerSession } from "@/lib/auth/session";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
+
+export const metadata: Metadata = {
+  title: { absolute: pageDocumentTitle("Склейка пользователей") },
+};
 
 export default async function AdminUserMergePage() {
   const session = await getServerSession();

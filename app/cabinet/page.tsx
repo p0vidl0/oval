@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SignOutButton } from "@/app/cabinet/sign-out-button";
@@ -31,12 +32,17 @@ import {
 } from "@/lib/format/datetime";
 import { listUserPayments } from "@/lib/payments/queries";
 import { paymentStatusLabel } from "@/lib/payments/status";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
 import {
   countUserAttendance,
   getTransferTargetsBySourceRegistrationIds,
   listUserRegistrationHistory,
   listUserRegistrations,
 } from "@/lib/training/registrations";
+
+export const metadata: Metadata = {
+  title: { absolute: pageDocumentTitle("Личный кабинет") },
+};
 
 function trainingsCountLabel(n: number) {
   const mod10 = n % 10;

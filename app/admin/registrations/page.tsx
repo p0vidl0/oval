@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ClickableRow } from "@/components/admin/clickable-row";
@@ -19,6 +20,7 @@ import {
   formatTimeHm,
 } from "@/lib/format/datetime";
 import { paymentMethodSuffix } from "@/lib/payments/status";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
 import {
   getParticipant,
   getParticipantAttendance,
@@ -36,6 +38,18 @@ type SearchParams = {
 };
 
 type Props = { searchParams: Promise<SearchParams> };
+
+export async function generateMetadata({
+  searchParams,
+}: Props): Promise<Metadata> {
+  const params = await searchParams;
+  if (!params.user) {
+    return { title: { absolute: pageDocumentTitle("Участники") } };
+  }
+  const participant = await getParticipant(params.user);
+  const label = participant?.name?.trim() || participant?.email;
+  return { title: { absolute: pageDocumentTitle(label || "Участники") } };
+}
 
 const BASE_PATH = "/admin/registrations";
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { NlShell } from "@/components/nl/shell";
 import { NlStatus } from "@/components/nl/status";
@@ -6,6 +7,11 @@ import { getServerSession } from "@/lib/auth/session";
 import { formatDateTimeRu, formatPriceRub } from "@/lib/format/datetime";
 import { getPaymentForUser } from "@/lib/payments/queries";
 import { paymentStatusLabel } from "@/lib/payments/status";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
+
+export const metadata: Metadata = {
+  title: { absolute: pageDocumentTitle("Квитанция") },
+};
 
 type Props = { params: Promise<{ id: string }> };
 

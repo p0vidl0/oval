@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import { AdminBanner } from "@/components/admin/admin-badges";
 import { PublicationEditor } from "@/components/admin/publication-editor";
 import { BackLink } from "@/components/nl/ui";
 import { createTrainingAction } from "@/lib/admin/session-actions";
 import { isTelegramChannelPublishConfigured } from "@/lib/bots/telegram/channel-config";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
+
+export const metadata: Metadata = {
+  title: { absolute: pageDocumentTitle("Новая тренировка") },
+};
 
 type Props = { searchParams: Promise<{ error?: string }> };
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -34,6 +35,7 @@ import {
   formatTimeInput,
   formatTimeRange,
 } from "@/lib/format/datetime";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
 import { getAdminSession } from "@/lib/training/admin-queries";
 import { trainingDisplayStatus } from "@/lib/training/status";
 import { JournalTab } from "./journal-tab";
@@ -53,6 +55,15 @@ type Props = {
     count?: string;
   }>;
 };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const row = await getAdminSession(id);
+  const title = row?.session.title.trim();
+  return {
+    title: { absolute: pageDocumentTitle(title || "Тренировка") },
+  };
+}
 
 const DONE_MESSAGES: Record<string, (count: string | undefined) => string> = {
   created: () => "Тренировка создана.",

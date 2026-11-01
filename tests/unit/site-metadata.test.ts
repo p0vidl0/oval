@@ -1,5 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { metaDescriptionFromBody } from "@/lib/site/public-origin";
+import {
+  capitalizePageTitle,
+  metaDescriptionFromBody,
+  pageDocumentTitle,
+  siteDocumentTitle,
+} from "@/lib/site/public-origin";
+
+describe("capitalizePageTitle", () => {
+  it("makes the first letter uppercase", () => {
+    expect(capitalizePageTitle("лента")).toBe("Лента");
+    expect(capitalizePageTitle("  политика конфиденциальности")).toBe(
+      "Политика конфиденциальности",
+    );
+  });
+
+  it("keeps an already capitalized title", () => {
+    expect(capitalizePageTitle("Сегодня")).toBe("Сегодня");
+    expect(siteDocumentTitle).toBe("Ночная Лига");
+  });
+
+  it("returns empty for a blank title", () => {
+    expect(capitalizePageTitle("   ")).toBe("");
+  });
+
+  it("builds the browser title", () => {
+    expect(pageDocumentTitle("лента")).toBe("Лента | Ночная Лига");
+    expect(pageDocumentTitle("   ")).toBe(siteDocumentTitle);
+  });
+});
 
 describe("metaDescriptionFromBody", () => {
   it("returns fallback for empty body", () => {

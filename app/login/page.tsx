@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
 import { LoginForm } from "@/app/login/login-form";
@@ -7,6 +8,11 @@ import { VkLogin } from "@/app/login/vk-login";
 import { NlLogo } from "@/components/nl/logo";
 import { isTelegramOidcConfigured } from "@/lib/auth/telegram/oidc-config";
 import { isVkConfigured } from "@/lib/auth/vk/config";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
+
+export const metadata: Metadata = {
+  title: { absolute: pageDocumentTitle("Вход") },
+};
 
 type Props = {
   searchParams: Promise<{ next?: string }>;

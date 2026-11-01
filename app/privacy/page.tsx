@@ -5,10 +5,14 @@ import {
   getPrivacyContactEmail,
   getPrivacyOperatorName,
 } from "@/lib/analytics/config";
-import { getPublicSiteOrigin, siteName } from "@/lib/site/public-origin";
+import {
+  getPublicSiteOrigin,
+  pageDocumentTitle,
+  siteName,
+} from "@/lib/site/public-origin";
 
 export const metadata: Metadata = {
-  title: "Политика конфиденциальности",
+  title: { absolute: pageDocumentTitle("Политика конфиденциальности") },
   description: `Обработка персональных данных на сайте ${siteName}.`,
 };
 

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Pagination } from "@/components/admin/pagination";
 import { UserMergeLoginDetails } from "@/components/admin/user-merge-login-details";
@@ -9,8 +10,13 @@ import { can } from "@/lib/auth/capabilities";
 import { roleLabel } from "@/lib/auth/role-labels";
 import { parseRole } from "@/lib/auth/roles";
 import { getServerSession } from "@/lib/auth/session";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
 
 type SearchParams = { q?: string; page?: string; size?: string };
+
+export const metadata: Metadata = {
+  title: { absolute: pageDocumentTitle("Пользователи") },
+};
 
 const BASE_PATH = "/admin/users";
 

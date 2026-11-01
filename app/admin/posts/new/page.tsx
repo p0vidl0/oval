@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminBanner } from "@/components/admin/admin-badges";
@@ -9,8 +10,22 @@ import {
   getAnnouncementForSession,
   getTrainingSessionById,
 } from "@/lib/feed/queries";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
 
 type Props = { searchParams: Promise<{ session?: string; error?: string }> };
+
+export async function generateMetadata({
+  searchParams,
+}: Props): Promise<Metadata> {
+  const { session: sessionId } = await searchParams;
+  return {
+    title: {
+      absolute: pageDocumentTitle(
+        sessionId ? "Анонс тренировки" : "Новая новость",
+      ),
+    },
+  };
+}
 
 /** Новость, либо анонс к существующей тренировке (`?session=`). */
 export default async function NewPublicationPage({ searchParams }: Props) {

@@ -3,7 +3,11 @@ import { postPath } from "@/lib/feed/open-post-url";
 import { listImagesForPost } from "@/lib/feed/post-images";
 import { getPublishedFeedPostBySlug } from "@/lib/feed/queries";
 import { isLikelyPostSlug } from "@/lib/feed/slug";
-import { metaDescriptionFromBody } from "@/lib/site/public-origin";
+import {
+  capitalizePageTitle,
+  metaDescriptionFromBody,
+  pageDocumentTitle,
+} from "@/lib/site/public-origin";
 import { uploadPublicUrl } from "@/lib/uploads/storage";
 
 export type DatedPostKind = "session" | "news";
@@ -21,6 +25,7 @@ export async function loadPublicDatedPost(slug: string, kind: DatedPostKind) {
 export async function metadataForPublicPost(
   post: NonNullable<Awaited<ReturnType<typeof getPublishedFeedPostBySlug>>>,
 ): Promise<Metadata> {
+  const title = capitalizePageTitle(post.title);
   const description = metaDescriptionFromBody(post.body);
   const images = await listImagesForPost(post.id);
   const cover = images[0];
@@ -29,11 +34,11 @@ export async function metadataForPublicPost(
   const canonical = postPath(post.slug, post.type);
 
   return {
-    title: post.title,
+    title: { absolute: pageDocumentTitle(post.title) },
     description,
     alternates: { canonical },
     openGraph: {
-      title: post.title,
+      title,
       description,
       type: "article",
       publishedTime,
@@ -51,7 +56,7 @@ export async function metadataForPublicPost(
     },
     twitter: {
       card: coverUrl ? "summary_large_image" : "summary",
-      title: post.title,
+      title,
       description,
       ...(coverUrl ? { images: [coverUrl] } : {}),
     },

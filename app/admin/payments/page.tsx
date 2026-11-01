@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Pagination } from "@/components/admin/pagination";
 import { AdminRegistrationRowActions } from "@/components/admin/registration-row-actions";
@@ -15,11 +16,16 @@ import {
   formatShortListDate,
   formatTimeHm,
 } from "@/lib/format/datetime";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
 import {
   listPaidOnCancelled,
   listTransferTargets,
   listUnpaid,
 } from "@/lib/training/admin-queries";
+
+export const metadata: Metadata = {
+  title: { absolute: pageDocumentTitle("Оплата") },
+};
 
 type Tab = "unpaid" | "refunds";
 

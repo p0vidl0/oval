@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { PaymentCheckoutTracker } from "@/components/analytics/payment-checkout-tracker";
@@ -7,6 +8,11 @@ import { BackLink } from "@/components/nl/ui";
 import { getServerSession } from "@/lib/auth/session";
 import { formatDateTimeRu, formatPriceRub } from "@/lib/format/datetime";
 import { ensurePaymentForRegistration } from "@/lib/payments/checkout";
+import { pageDocumentTitle } from "@/lib/site/public-origin";
+
+export const metadata: Metadata = {
+  title: { absolute: pageDocumentTitle("Оплата тренировки") },
+};
 
 type Props = { params: Promise<{ registrationId: string }> };
 

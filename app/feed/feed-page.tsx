@@ -16,15 +16,18 @@ import { loadFeedLiveCards } from "@/lib/feed/load-feed-live-cards";
 import { postPath } from "@/lib/feed/open-post-url";
 import { listUpcomingScheduledSessions } from "@/lib/feed/queries";
 import { formatShortListDate, formatTimeHm } from "@/lib/format/datetime";
-import { siteDefaultDescription } from "@/lib/site/public-origin";
+import {
+  siteDefaultDescription,
+  siteDocumentTitle,
+} from "@/lib/site/public-origin";
 import { listUserRegistrations } from "@/lib/training/registrations";
 
 export const feedPageMetadata: Metadata = {
-  title: "Лента",
+  title: { absolute: siteDocumentTitle },
   description: siteDefaultDescription,
   alternates: { canonical: FEED_LIST_PATH },
   openGraph: {
-    title: "Лента",
+    title: siteDocumentTitle,
     description: siteDefaultDescription,
     url: FEED_LIST_PATH,
   },
