@@ -107,6 +107,9 @@ export function AnnouncementFeedCard(props: FeedCardProps) {
             {training ? (
               <FeedCardTrainingProgress
                 training={training}
+                registrationOpen={Boolean(
+                  actions?.registerForm || actions?.registerHref,
+                )}
                 href={
                   linkTitle && !previewMode
                     ? postPath(postSlug, type)

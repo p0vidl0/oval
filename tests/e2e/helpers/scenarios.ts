@@ -454,3 +454,60 @@ export async function seedAnnouncementPublicUrlE2e(runId: string) {
   );
   return { postId, postSlug, title, sessionId };
 }
+
+/** Два анонса с лимитом: запись открыта и уже закрыта стартом. Полоска мест есть в обоих. */
+export async function seedOccupancyCaptionE2e(runId: string) {
+  if (!process.env.DATABASE_URL?.trim()) {
+    throw new Error("DATABASE_URL is required for e2e seed helpers");
+  }
+  const suffix = runId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 24);
+
+  const open = await seedOccupancyAnnouncement({
+    suffix,
+    kind: "open",
+    title: `E2E Occupancy open ${suffix}`,
+    startsAt: new Date("2027-06-01T14:00:00+06:00"),
+    publishedAt: new Date("2026-10-01T12:00:00+06:00"),
+  });
+  const closed = await seedOccupancyAnnouncement({
+    suffix,
+    kind: "closed",
+    title: `E2E Occupancy closed ${suffix}`,
+    startsAt: new Date("2024-08-15T14:00:00+06:00"),
+    publishedAt: new Date("2024-08-01T12:00:00+06:00"),
+  });
+  return { open, closed };
+}
+
+async function seedOccupancyAnnouncement(params: {
+  suffix: string;
+  kind: "open" | "closed";
+  title: string;
+  startsAt: Date;
+  publishedAt: Date;
+}) {
+  const postId = `e2e-occ-${params.kind}-${params.suffix}`;
+  const sessionId = `e2e-occ-${params.kind}-sess-${params.suffix}`;
+  await db.insert(trainingSessions).values({
+    id: sessionId,
+    title: params.title,
+    startsAt: params.startsAt,
+    priceCents: 0,
+    capacity: 25,
+    status: "scheduled",
+    registrationEnabled: true,
+  });
+  const postSlug = await insertFeedPost(
+    {
+      id: postId,
+      type: "training_announcement",
+      title: params.title,
+      body: "e2e occupancy caption",
+      status: "published",
+      publishedAt: params.publishedAt,
+      relatedSessionId: sessionId,
+    },
+    { slugAt: params.startsAt },
+  );
+  return { postId, postSlug, title: params.title };
+}

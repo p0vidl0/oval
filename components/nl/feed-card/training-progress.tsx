@@ -1,26 +1,30 @@
 import Link from "next/link";
+import { occupancyCaption } from "@/components/nl/feed-card/occupancy-caption";
 import type { FeedCardTraining } from "@/components/nl/feed-card/types";
 
 export function FeedCardTrainingProgress({
   training,
   href,
+  registrationOpen,
 }: {
   training: FeedCardTraining;
   href?: string;
+  /** Кнопка «Записаться» на карточке. Пока её нет, «осталось N мест» не показываем. */
+  registrationOpen: boolean;
 }) {
   const capacity = training.capacity;
   if (!training.registrationEnabled || capacity === null) return null;
 
   const taken = training.activeCount ?? 0;
-  const left = Math.max(0, capacity - taken);
   const fillPct = capacity > 0 ? Math.min(100, (taken / capacity) * 100) : 0;
+  const caption = occupancyCaption({ taken, capacity, registrationOpen });
 
   const row = (
     <>
-      <span>
-        Занято {taken} из {capacity}
-      </span>
-      <span className="nl-progress__left">осталось {left} мест</span>
+      <span>{caption.takenLabel}</span>
+      {caption.leftLabel ? (
+        <span className="nl-progress__left">{caption.leftLabel}</span>
+      ) : null}
     </>
   );
 
