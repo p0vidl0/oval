@@ -19,6 +19,17 @@ export const unreleased: UnreleasedChanges = {};
 /** От новых к старым; [0].version совпадает с package.json */
 export const releases: readonly SiteRelease[] = [
   {
+    version: "1.6.0",
+    date: "2026-11-01",
+    publicNotes: [
+      "Когда на тренировку уже нельзя записаться, на карточке остаётся число участников — без строки «осталось мест».",
+    ],
+    changed: [
+      "Подпись мест на карточке анонса: при открытой записи «занято / осталось», после закрытия — только число участников (`components/nl/feed-card/occupancy-caption.ts`).",
+      "Базовые образы Node и Postgres закреплены по дайджесту SHA256 (`.deploy/Dockerfile`, `.docker/`).",
+    ],
+  },
+  {
     version: "1.5.0",
     date: "2026-10-31",
     publicNotes: [
