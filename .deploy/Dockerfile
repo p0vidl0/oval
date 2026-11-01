@@ -13,16 +13,20 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 RUN npm pkg delete scripts.prepare && pnpm install --frozen-lockfile
 
 FROM deps AS builder
+ARG GIT_COMMIT=unknown
 ARG SERVER_ACTION_BODY_SIZE_LIMIT
+ENV GIT_COMMIT=${GIT_COMMIT}
 ENV SERVER_ACTION_BODY_SIZE_LIMIT=${SERVER_ACTION_BODY_SIZE_LIMIT}
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm run build
 
 FROM node:${NODE_VERSION}-bookworm-slim AS runner
+ARG GIT_COMMIT=unknown
 
 WORKDIR /app
 
+ENV GIT_COMMIT=${GIT_COMMIT}
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000

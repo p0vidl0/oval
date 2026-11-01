@@ -1657,9 +1657,25 @@ select.nl-input {
 
 .nl-site-footer {
   flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
   padding: var(--space-2) var(--space-4)
     calc(var(--space-2) + env(safe-area-inset-bottom));
   text-align: center;
+}
+
+.nl-site-footer__sep {
+  color: var(--ink-muted);
+  font-size: 12px;
+  user-select: none;
+}
+
+.nl-site-footer__build {
+  color: var(--ink-muted);
+  font-size: 12px;
 }
 
 .nl-site-footer__link {

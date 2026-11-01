@@ -56,6 +56,11 @@ describe("static page titles", () => {
       pageDocumentTitle("Политика конфиденциальности"),
     ],
     [
+      "updates",
+      async () => (await import("@/app/updates/page")).metadata,
+      pageDocumentTitle("Обновления"),
+    ],
+    [
       "login",
       async () => (await import("@/app/login/page")).metadata,
       pageDocumentTitle("Вход"),

@@ -11,6 +11,7 @@ import { can } from "@/lib/auth/capabilities";
 import { getServerSession } from "@/lib/auth/session";
 import { userHeaderDisplay } from "@/lib/auth/user-display";
 import { FEED_LIST_PATH } from "@/lib/feed/feed-list-path";
+import { footerBuildLabel } from "@/lib/site/build-identity";
 
 export async function NlShell({
   children,
@@ -89,6 +90,22 @@ export async function NlShell({
         <Link href="/privacy" className="nl-site-footer__link">
           Конфиденциальность
         </Link>
+        {isAdmin ? (
+          <>
+            <span className="nl-site-footer__sep" aria-hidden="true">
+              |
+            </span>
+            <Link href="/updates" className="nl-site-footer__link">
+              Обновления
+            </Link>
+          </>
+        ) : null}
+        <span className="nl-site-footer__sep" aria-hidden="true">
+          |
+        </span>
+        <span className="nl-site-footer__build nl-mono">
+          {footerBuildLabel()}
+        </span>
       </footer>
       <nav className="nl-tabbar" aria-label="Разделы">
         <Link

@@ -44,6 +44,9 @@ describe("labelForAnalyticsPath", () => {
     expect(labelForAnalyticsPath("/privacy", new Map())).toBe(
       STATIC_ANALYTICS_PATH_LABELS["/privacy"],
     );
+    expect(labelForAnalyticsPath("/updates", new Map())).toBe(
+      STATIC_ANALYTICS_PATH_LABELS["/updates"],
+    );
   });
 
   it("uses post title when present", () => {

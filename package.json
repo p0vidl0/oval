@@ -1,6 +1,6 @@
 {
   "name": "oval",
-  "version": "0.1.0",
+  "version": "1.5.0",
   "private": true,
   "packageManager": "pnpm@12.9.1",
   "scripts": {
@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "precommit": "pnpm run lint && pnpm run typecheck && pnpm run test:unit",
     "format": "biome format --write",
+    "changelog": "tsx scripts/render-changelog.ts",
     "auth:generate": "pnpm dlx auth@latest generate --config auth.ts --output lib/db/schema/auth-schema.ts --adapter drizzle --dialect pg -y",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",

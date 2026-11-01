@@ -17,6 +17,7 @@ export const STATIC_ANALYTICS_PATH_LABELS: Readonly<Record<string, string>> = {
   "/login": "Вход",
   "/login/telegram/complete": "Telegram — вход",
   "/privacy": "Политика конфиденциальности",
+  "/updates": "Обновления",
 };
 
 export function feedPostIdFromAnalyticsPath(path: string): string | null {
