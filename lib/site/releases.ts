@@ -19,6 +19,14 @@ export const unreleased: UnreleasedChanges = {};
 /** От новых к старым; [0].version совпадает с package.json */
 export const releases: readonly SiteRelease[] = [
   {
+    version: "1.6.1",
+    date: "2026-11-02",
+    publicNotes: ["Обновлены компоненты безопасности."],
+    changed: [
+      "Рантайм Node 26.13.0 (`engines`, образы `.deploy/` и `.docker/`); Next.js 16.4.3 и nodemailer 10; override zod ≥4.6.7.",
+    ],
+  },
+  {
     version: "1.6.0",
     date: "2026-11-01",
     publicNotes: [
