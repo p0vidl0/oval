@@ -3,3 +3,5 @@ allowBuilds:
   lefthook: true
 minimumReleaseAgeExclude:
   - dotenv@18.0.6
+overrides:
+  zod: ">=4.6.7"
