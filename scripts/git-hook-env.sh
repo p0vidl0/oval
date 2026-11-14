@@ -1,7 +1,10 @@
 # Sourced из git-хуков lefthook (ключ rc). GUI Git (Cursor) часто не видит node/pnpm.
 # shellcheck shell=bash
 
-ROOT="$(git rev-parse --show-toplevel 2>/dev/null || cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
+# `A || B && C` выполняется как `(A || B) && C`: при успешном git в ROOT попадали две строки.
+if ! ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+  ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd)"
+fi
 export PATH="${ROOT}/node_modules/.bin:/opt/homebrew/bin:/usr/local/bin:${PATH}"
 
 if [ -d "${HOME}/.volta" ]; then
