@@ -34,6 +34,7 @@ export const socialPublishStatusEnum = pgEnum("social_publish_status", [
   "pending",
   "sent",
   "failed",
+  "sending",
 ]);
 
 export const feedPosts = pgTable(

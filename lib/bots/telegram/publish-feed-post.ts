@@ -1,5 +1,6 @@
 import { withSocialPublishGuard } from "@/lib/bots/social-publish/guard";
 import {
+  isTelegramOutcomeUnknown,
   sendTelegramMediaGroupUpload,
   sendTelegramMessage,
   sendTelegramPhotoUpload,
@@ -17,10 +18,14 @@ import { listImagesForPost } from "@/lib/feed/post-images";
 import { isPostLive } from "@/lib/feed/publication";
 import { getFeedPostById, getTrainingSessionForPost } from "@/lib/feed/queries";
 import {
+  claimSocialPublishJob,
   getSocialPublishJob,
   jobReadyToSend,
+  markSocialPublishOutcomeUnknown,
   markSocialPublishSent,
   recordSocialPublishFailure,
+  type SocialPublishClaim,
+  touchSocialPublishClaim,
 } from "@/lib/feed/social-publish-jobs";
 import type { FeedPostType } from "@/lib/feed/types";
 import { log } from "@/lib/log";
@@ -103,14 +108,43 @@ async function sendChannelPost(
     caption,
     { parse_mode: parseMode },
   );
-  await sendTelegramMessage(channelId, `${buttonLabel(type)} →`, {
-    inline_keyboard: keyboard,
-  });
+  // Альбом уже в канале: сбой кнопки не должен вести к повтору всего поста.
+  try {
+    await sendTelegramMessage(channelId, `${buttonLabel(type)} →`, {
+      inline_keyboard: keyboard,
+    });
+  } catch (error) {
+    log("error", "telegram_publish_button_failed", { postId, error });
+  }
   return messageIds[0] as number;
+}
+
+const CLAIM_HEARTBEAT_MS = 30_000;
+
+/** Что успело произойти до исключения — от этого зависит, можно ли повторять. */
+type PublishSlot = {
+  claim: SocialPublishClaim | null;
+  /** Telegram принял пост; дальше строка не возвращается в `pending`. */
+  messageId: number | null;
+};
+
+/** Пока upload идёт, догон не считает claim брошенным. */
+function keepClaimAlive(claim: SocialPublishClaim): () => void {
+  const timer = setInterval(() => {
+    void touchSocialPublishClaim(claim).catch((error) => {
+      log("error", "telegram_publish_claim_heartbeat", {
+        jobId: claim.jobId,
+        error,
+      });
+    });
+  }, CLAIM_HEARTBEAT_MS);
+  timer.unref?.();
+  return () => clearInterval(timer);
 }
 
 export async function publishFeedPostToTelegramChannel(
   postId: string,
+  slot: PublishSlot = { claim: null, messageId: null },
 ): Promise<void> {
   if (!isTelegramChannelPublishConfigured()) return;
 
@@ -134,45 +168,92 @@ export async function publishFeedPostToTelegramChannel(
       const post = await getFeedPostById(postId);
       if (!post?.publishToTelegram || !isPostLive(post)) return;
 
-      const caption = await buildTelegramCaption(post);
-      const photos = await resolvePhotoUploads(postId);
+      const claim = await claimSocialPublishJob(job.id);
+      if (!claim) return;
+      slot.claim = claim;
+      const stopHeartbeat = keepClaimAlive(claim);
+      try {
+        const caption = await buildTelegramCaption(post);
+        const photos = await resolvePhotoUploads(postId);
 
-      log("info", "telegram_publish_start", { postId: post.id });
+        log("info", "telegram_publish_start", { postId: post.id });
 
-      const messageId = await sendChannelPost(
-        channelId,
-        post.id,
-        post.slug,
-        post.type,
-        caption,
-        photos,
-      );
+        const messageId = await sendChannelPost(
+          channelId,
+          post.id,
+          post.slug,
+          post.type,
+          caption,
+          photos,
+        );
+        slot.messageId = messageId;
 
-      await markSocialPublishSent(job.id, messageId);
-      log("info", "telegram_publish_done", {
-        postId: post.id,
-        ok: true,
-        messageId,
-      });
+        const marked = await markSocialPublishSent(claim, messageId);
+        if (!marked) {
+          log("error", "telegram_publish_mark_missed", {
+            postId: post.id,
+            messageId,
+          });
+        }
+        log("info", "telegram_publish_done", {
+          postId: post.id,
+          ok: true,
+          messageId,
+        });
+      } finally {
+        stopHeartbeat();
+      }
     },
   );
+}
+
+async function settleFailedPublish(
+  postId: string,
+  slot: PublishSlot,
+  error: unknown,
+): Promise<void> {
+  const { claim, messageId } = slot;
+  if (claim && messageId != null) {
+    // Пост уже в канале. Не удалось только записать `sent` — повторяем запись,
+    // при неудаче строка останется `sending` и догон переведёт её в `failed`.
+    const marked = await markSocialPublishSent(claim, messageId);
+    log(marked ? "info" : "error", "telegram_publish_mark_retry", {
+      postId,
+      messageId,
+      marked,
+      error,
+    });
+    return;
+  }
+  if (claim && isTelegramOutcomeUnknown(error)) {
+    await markSocialPublishOutcomeUnknown(claim, error);
+  } else if (claim) {
+    await recordSocialPublishFailure(claim.jobId, error, claim.token);
+  } else {
+    const job = await getSocialPublishJob(postId, "telegram");
+    if (job?.status === "pending") {
+      await recordSocialPublishFailure(job.id, error);
+    }
+  }
+  log("error", "telegram_publish_done", { postId, ok: false, error });
 }
 
 /** Не прерывает сохранение публикации при ошибке Telegram API. */
 export async function tryPublishFeedPostToTelegramChannel(
   postId: string,
 ): Promise<void> {
+  const slot: PublishSlot = { claim: null, messageId: null };
   try {
-    await publishFeedPostToTelegramChannel(postId);
+    await publishFeedPostToTelegramChannel(postId, slot);
   } catch (error) {
-    const job = await getSocialPublishJob(postId, "telegram");
-    if (job?.status === "pending") {
-      await recordSocialPublishFailure(job.id, error);
+    try {
+      await settleFailedPublish(postId, slot, error);
+    } catch (settleError) {
+      log("error", "telegram_publish_settle_failed", {
+        postId,
+        error,
+        settleError,
+      });
     }
-    log("error", "telegram_publish_done", {
-      postId,
-      ok: false,
-      error,
-    });
   }
 }

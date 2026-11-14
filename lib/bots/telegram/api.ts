@@ -2,6 +2,22 @@ import { getTelegramBotToken } from "@/lib/auth/telegram/config";
 import { telegramBotMethodUrl } from "@/lib/bots/telegram/api-root";
 import type { PostUploadFile } from "@/lib/uploads/storage";
 
+/** Без таймаута зависший запрос держит claim (heartbeat) бесконечно. */
+export const TELEGRAM_API_TIMEOUT_MS = 60_000;
+
+/**
+ * Таймаут: запрос мог дойти, результат неизвестен.
+ * Повтор такого вызова рискует дублем в канале.
+ */
+export function isTelegramOutcomeUnknown(error: unknown): boolean {
+  // fetch отклоняется DOMException, не всегда `instanceof Error`.
+  const name =
+    typeof error === "object" && error !== null && "name" in error
+      ? error.name
+      : undefined;
+  return name === "TimeoutError" || name === "AbortError";
+}
+
 type InlineKeyboardButton = {
   text: string;
   url?: string;
@@ -70,6 +86,7 @@ async function callTelegramBotApi(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(TELEGRAM_API_TIMEOUT_MS),
   });
 
   return parseTelegramResponse(method, res);
@@ -105,6 +122,7 @@ async function callTelegramBotApiMultipart(
   const res = await fetch(telegramBotMethodUrl(token, method), {
     method: "POST",
     body: form,
+    signal: AbortSignal.timeout(TELEGRAM_API_TIMEOUT_MS),
   });
 
   return parseTelegramResponse(method, res);

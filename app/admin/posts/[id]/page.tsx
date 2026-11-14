@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminBanner, PostStatusBadge } from "@/components/admin/admin-badges";
 import { PublicationEditor } from "@/components/admin/publication-editor";
+import { TelegramPublishStatus } from "@/components/admin/telegram-publish-status";
 import { BackLink } from "@/components/nl/ui";
 import { updatePublication } from "@/lib/admin/feed-actions";
 import { isTelegramChannelPublishConfigured } from "@/lib/bots/telegram/channel-config";
@@ -10,6 +11,7 @@ import { postPath } from "@/lib/feed/open-post-url";
 import { listImagesForPost } from "@/lib/feed/post-images";
 import { isPostLive, isPostScheduled } from "@/lib/feed/publication";
 import { getFeedPostById, getTrainingSessionForPost } from "@/lib/feed/queries";
+import { getSocialPublishJob } from "@/lib/feed/social-publish-jobs";
 import { FEED_POST_TYPE_LABELS } from "@/lib/feed/types";
 import {
   formatDateTimeRu,
@@ -41,6 +43,8 @@ const DONE_MESSAGES: Record<string, string> = {
   saved: "Сохранено.",
   unpublished: "Снято с публикации.",
   published: "Опубликовано.",
+  telegram_requeued: "Публикация поставлена в очередь на отправку в Telegram.",
+  telegram_marked_sent: "Отмечено: публикация уже в Telegram-канале.",
 };
 
 export default async function AdminPostDetailPage({
@@ -54,6 +58,7 @@ export default async function AdminPostDetailPage({
 
   const training = await getTrainingSessionForPost(post);
   const images = await listImagesForPost(post.id);
+  const telegramJob = await getSocialPublishJob(post.id, "telegram");
   const now = new Date();
 
   return (
@@ -97,6 +102,14 @@ export default async function AdminPostDetailPage({
         <AdminBanner tone="error">{error}</AdminBanner>
       ) : done && DONE_MESSAGES[done] ? (
         <AdminBanner tone="ok">{DONE_MESSAGES[done]}</AdminBanner>
+      ) : null}
+
+      {telegramJob ? (
+        <TelegramPublishStatus
+          postId={post.id}
+          job={telegramJob}
+          live={isPostLive(post, now)}
+        />
       ) : null}
 
       {training ? (

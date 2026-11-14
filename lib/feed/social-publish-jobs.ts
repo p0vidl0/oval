@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, lt } from "drizzle-orm";
 import type { SocialPublishChannel } from "@/lib/bots/social-publish/types";
 import { isTelegramChannelPublishConfigured } from "@/lib/bots/telegram/channel-config";
 import { readSocialPublishMaxRetries } from "@/lib/config/social-publish";
@@ -8,6 +8,15 @@ import { livePostCondition } from "@/lib/feed/publication";
 import { getFeedPostById } from "@/lib/feed/queries";
 
 const LAST_ERROR_MAX = 1000;
+
+/** Дольше этого `sending` без heartbeat считается брошенным. */
+export const SOCIAL_PUBLISH_CLAIM_STALE_MS = 2 * 60 * 1000;
+
+export type SocialPublishClaim = {
+  jobId: string;
+  /** Владелец claim. Чужой `recordSocialPublishFailure` по нему не попадёт. */
+  token: string;
+};
 
 export type SocialPublishJobRow = typeof feedPostSocialPublishes.$inferSelect;
 
@@ -135,23 +144,129 @@ export function jobReadyToSend(
   return job.status === "pending" && job.attemptCount < maxRetries;
 }
 
-export async function markSocialPublishSent(
+/**
+ * Один победитель: `pending` → `sending` до вызова Telegram.
+ * Второй параллельный вызов (after + догон, другой процесс) получает null.
+ * `external_id` на время отправки — токен владельца, после успеха — message id.
+ */
+export async function claimSocialPublishJob(
   jobId: string,
-  externalId: string | number,
+): Promise<SocialPublishClaim | null> {
+  const claim: SocialPublishClaim = { jobId, token: crypto.randomUUID() };
+  const rows = await db
+    .update(feedPostSocialPublishes)
+    .set({
+      status: "sending",
+      externalId: claim.token,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(feedPostSocialPublishes.id, jobId),
+        eq(feedPostSocialPublishes.status, "pending"),
+      ),
+    )
+    .returning({ id: feedPostSocialPublishes.id });
+  return rows.length === 1 ? claim : null;
+}
+
+/** Продлевает живой claim, чтобы догон не забрал его во время долгого upload. */
+export async function touchSocialPublishClaim(
+  claim: SocialPublishClaim,
+): Promise<boolean> {
+  const rows = await db
+    .update(feedPostSocialPublishes)
+    .set({ updatedAt: new Date() })
+    .where(
+      and(
+        eq(feedPostSocialPublishes.id, claim.jobId),
+        eq(feedPostSocialPublishes.status, "sending"),
+        eq(feedPostSocialPublishes.externalId, claim.token),
+      ),
+    )
+    .returning({ id: feedPostSocialPublishes.id });
+  return rows.length === 1;
+}
+
+export const SOCIAL_PUBLISH_STALE_CLAIM_ERROR =
+  "Отправка прервана, результат неизвестен — проверьте канал";
+
+/**
+ * Брошенный `sending` → `failed`, не в очередь.
+ * Процесс мог упасть уже после ответа Telegram; повтор дал бы дубль.
+ * Токен владельца остаётся: если процесс жив и Telegram всё же ответит,
+ * `markSocialPublishSent` переведёт строку в `sent`.
+ * Свежий heartbeat не трогает.
+ */
+export async function failStaleSocialPublishClaims(
+  now = new Date(),
+): Promise<void> {
+  const cutoff = new Date(now.getTime() - SOCIAL_PUBLISH_CLAIM_STALE_MS);
+  await db
+    .update(feedPostSocialPublishes)
+    .set({
+      status: "failed",
+      lastError: SOCIAL_PUBLISH_STALE_CLAIM_ERROR,
+    })
+    .where(
+      and(
+        eq(feedPostSocialPublishes.status, "sending"),
+        lt(feedPostSocialPublishes.updatedAt, cutoff),
+      ),
+    );
+}
+
+/** Результат вызова неизвестен (таймаут) → `failed` без повтора. */
+export async function markSocialPublishOutcomeUnknown(
+  claim: SocialPublishClaim,
+  error: unknown,
 ): Promise<void> {
   await db
+    .update(feedPostSocialPublishes)
+    .set({
+      status: "failed",
+      externalId: null,
+      lastError: truncateError(error),
+    })
+    .where(
+      and(
+        eq(feedPostSocialPublishes.id, claim.jobId),
+        eq(feedPostSocialPublishes.status, "sending"),
+        eq(feedPostSocialPublishes.externalId, claim.token),
+      ),
+    );
+}
+
+/**
+ * Владелец claim записывает успех. `failed` тоже принимается: догон мог
+ * счесть отправку брошенной, пока ждали ответа Telegram (токен он оставляет).
+ */
+export async function markSocialPublishSent(
+  claim: SocialPublishClaim,
+  externalId: string | number,
+): Promise<boolean> {
+  const rows = await db
     .update(feedPostSocialPublishes)
     .set({
       status: "sent",
       externalId: String(externalId),
       lastError: null,
     })
-    .where(eq(feedPostSocialPublishes.id, jobId));
+    .where(
+      and(
+        eq(feedPostSocialPublishes.id, claim.jobId),
+        inArray(feedPostSocialPublishes.status, ["sending", "failed"]),
+        eq(feedPostSocialPublishes.externalId, claim.token),
+      ),
+    )
+    .returning({ id: feedPostSocialPublishes.id });
+  return rows.length === 1;
 }
 
 export async function recordSocialPublishFailure(
   jobId: string,
   error: unknown,
+  token?: string,
 ): Promise<void> {
   const rows = await db
     .select()
@@ -159,7 +274,10 @@ export async function recordSocialPublishFailure(
     .where(eq(feedPostSocialPublishes.id, jobId))
     .limit(1);
   const job = rows[0];
-  if (!job || job.status !== "pending") return;
+  const ownsSending =
+    token != null && job?.status === "sending" && job.externalId === token;
+  const ownsPending = token == null && job?.status === "pending";
+  if (!job || (!ownsSending && !ownsPending)) return;
 
   const maxRetries = readSocialPublishMaxRetries();
   const next = nextFailureAfterAttempt(job.attemptCount, maxRetries);
@@ -169,6 +287,72 @@ export async function recordSocialPublishFailure(
       attemptCount: next.attemptCount,
       status: next.status,
       lastError: truncateError(error),
+      ...(ownsSending ? { externalId: null } : {}),
     })
-    .where(eq(feedPostSocialPublishes.id, jobId));
+    .where(
+      ownsSending
+        ? and(
+            eq(feedPostSocialPublishes.id, jobId),
+            eq(feedPostSocialPublishes.status, "sending"),
+            eq(feedPostSocialPublishes.externalId, token),
+          )
+        : and(
+            eq(feedPostSocialPublishes.id, jobId),
+            eq(feedPostSocialPublishes.status, "pending"),
+          ),
+    );
+}
+
+/**
+ * `failed`, но попытки не исчерпаны — значит, это таймаут или брошенная
+ * отправка: пост мог уже уйти в канал.
+ */
+export function socialPublishOutcomeUnknown(
+  job: Pick<SocialPublishJobRow, "status" | "attemptCount">,
+  maxRetries = readSocialPublishMaxRetries(),
+): boolean {
+  return job.status === "failed" && job.attemptCount < maxRetries;
+}
+
+/** Админ: `failed` → `pending` с нуля попыток. false — строка уже не `failed`. */
+export async function requeueFailedSocialPublish(
+  postId: string,
+  channel: SocialPublishChannel,
+): Promise<boolean> {
+  const rows = await db
+    .update(feedPostSocialPublishes)
+    .set({
+      status: "pending",
+      attemptCount: 0,
+      externalId: null,
+      lastError: null,
+    })
+    .where(
+      and(
+        eq(feedPostSocialPublishes.feedPostId, postId),
+        eq(feedPostSocialPublishes.channel, channel),
+        eq(feedPostSocialPublishes.status, "failed"),
+      ),
+    )
+    .returning({ id: feedPostSocialPublishes.id });
+  return rows.length === 1;
+}
+
+/** Админ проверил канал: пост там есть. `failed` → `sent` без отправки. */
+export async function markFailedSocialPublishSent(
+  postId: string,
+  channel: SocialPublishChannel,
+): Promise<boolean> {
+  const rows = await db
+    .update(feedPostSocialPublishes)
+    .set({ status: "sent", externalId: null, lastError: null })
+    .where(
+      and(
+        eq(feedPostSocialPublishes.feedPostId, postId),
+        eq(feedPostSocialPublishes.channel, channel),
+        eq(feedPostSocialPublishes.status, "failed"),
+      ),
+    )
+    .returning({ id: feedPostSocialPublishes.id });
+  return rows.length === 1;
 }

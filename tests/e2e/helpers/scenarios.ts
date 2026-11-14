@@ -1,5 +1,11 @@
+import { sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { payments, registrations, trainingSessions } from "@/lib/db/schema";
+import {
+  feedPostSocialPublishes,
+  payments,
+  registrations,
+  trainingSessions,
+} from "@/lib/db/schema";
 import { account, user } from "@/lib/db/schema/auth-schema";
 // Статический импорт: динамический import() на Node 24 не резолвит `@/` внутри модуля.
 import { insertFeedPost } from "@/tests/helpers/insert-feed-post";
@@ -17,6 +23,21 @@ async function insertUser(params: {
     emailVerified: Boolean(params.email),
     role: params.role ?? "user",
   });
+}
+
+/**
+ * Сколько часы приложения опережают часы хоста (мс). Postgres живёт в той же
+ * Docker VM, что и app; на macOS часы VM после сна хоста отстают на минуты.
+ */
+async function serverClockOffsetMs(): Promise<number> {
+  const before = Date.now();
+  const rows = await db.execute<{ now: string | Date }>(
+    sql`select clock_timestamp() as now`,
+  );
+  const after = Date.now();
+  const raw = rows[0]?.now;
+  if (raw == null) throw new Error("select clock_timestamp() returned no row");
+  return new Date(raw).getTime() - (before + after) / 2;
 }
 
 async function insertTelegramAccount(userId: string, accountId: string) {
@@ -87,7 +108,8 @@ export type E2eSeedScenario =
   | "admin-today"
   | "email-merge-victim"
   | "admin-payment-conflict"
-  | "admin-merge-success";
+  | "admin-merge-success"
+  | "admin-telegram-failed";
 
 export type AttendanceParticipant = {
   id: string;
@@ -101,7 +123,7 @@ export type E2eSeedResult =
       superAdminEmail: string;
       sessionId: string;
       participantName: string;
-      /** Когда откроется окно отметки (ISO). */
+      /** Когда откроется окно отметки (ISO), по часам хоста. */
       opensAt: string;
     }
   | {
@@ -129,6 +151,11 @@ export type E2eSeedResult =
       superAdminEmail: string;
       targetSearch: string;
       sourceSearch: string;
+    }
+  | {
+      scenario: "admin-telegram-failed";
+      superAdminEmail: string;
+      postId: string;
     }
   | {
       scenario: "admin-merge-success";
@@ -163,7 +190,9 @@ export async function seedE2eScenario(
       email: `e2e-soon-p-${suffix}@oval.test`,
     });
     // Без сбора окно открывается за час до старта: через 25 секунд.
-    const opensAt = new Date(Date.now() + 25_000);
+    // Считаем по часам приложения — кнопки появляются по ним (`RefreshAt`).
+    const offset = await serverClockOffsetMs();
+    const opensAt = new Date(Date.now() + offset + 25_000);
     const sessionId = `e2e-soon-sess-${suffix}`;
     await db.insert(trainingSessions).values({
       id: sessionId,
@@ -186,7 +215,8 @@ export async function seedE2eScenario(
       superAdminEmail,
       sessionId,
       participantName,
-      opensAt: opensAt.toISOString(),
+      // Тест ждёт по часам хоста.
+      opensAt: new Date(opensAt.getTime() - offset).toISOString(),
     };
   }
 
@@ -261,6 +291,36 @@ export async function seedE2eScenario(
       attended,
       walkIn,
     };
+  }
+
+  if (scenario === "admin-telegram-failed") {
+    const superAdminEmail = `e2e-tg-super-${suffix}@oval.test`;
+    await insertUser({
+      id: `e2e-tg-super-${suffix}`,
+      name: "E2E Telegram Super",
+      email: superAdminEmail,
+      role: "super_admin",
+    });
+    const postId = `e2e-tg-post-${suffix}`;
+    await insertFeedPost({
+      id: postId,
+      type: "news",
+      title: `E2E Telegram ${suffix}`,
+      body: "e2e",
+      status: "published",
+      publishedAt: new Date(Date.now() - 60_000),
+      publishToTelegram: true,
+    });
+    // Таймаут Bot API: попытки не потрачены, результат неизвестен.
+    await db.insert(feedPostSocialPublishes).values({
+      id: crypto.randomUUID(),
+      feedPostId: postId,
+      channel: "telegram",
+      status: "failed",
+      attemptCount: 0,
+      lastError: "The operation was aborted due to timeout",
+    });
+    return { scenario, superAdminEmail, postId };
   }
 
   if (scenario === "admin-today") {

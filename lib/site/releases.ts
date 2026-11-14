@@ -14,7 +14,15 @@ export type SiteRelease = {
 export type UnreleasedChanges = ReleaseChangeSections;
 
 /** Следующий релиз; на сайт не попадает */
-export const unreleased: UnreleasedChanges = {};
+export const unreleased: UnreleasedChanges = {
+  added: [
+    "Статус отправки в Telegram на странице публикации в админке; после ошибки — «Отправить ещё раз» и «Пост уже в канале» с подтверждением (`components/admin/telegram-publish-status.tsx`).",
+  ],
+  fixed: [
+    "Пост дважды уходил в Telegram-канал: `after()` и догон отправляли его одновременно. Перед отправкой строка атомарно переходит в `sending` (`lib/feed/social-publish-jobs.ts`); замок и лимит 10/час — на `globalThis`.",
+    "Пост больше не шлётся повторно, если Telegram его уже принял: сбой кнопки под альбомом или записи `sent` не возвращает строку в очередь. Таймаут Bot API (60 с) и брошенный `sending` → `failed`.",
+  ],
+};
 
 /** От новых к старым; [0].version совпадает с package.json */
 export const releases: readonly SiteRelease[] = [
