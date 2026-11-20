@@ -54,6 +54,7 @@ export function Pagination({
           className="nl-button nl-button--sm"
           href={href(basePath, linkParams, pageParam, page - 1)}
           rel="prev"
+          scroll={false}
         >
           ← Назад
         </Link>
@@ -73,6 +74,7 @@ export function Pagination({
           className="nl-button nl-button--sm"
           href={href(basePath, linkParams, pageParam, page + 1)}
           rel="next"
+          scroll={false}
         >
           Вперёд →
         </Link>

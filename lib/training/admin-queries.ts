@@ -421,6 +421,24 @@ export async function listParticipants(query: string, request: PageRequest) {
   );
 }
 
+/**
+ * Все активные пользователи для выгрузки. «Посещено» — активные записи
+ * с явкой `attended`; снятые, прогулы и уважительные не считаются.
+ */
+export async function listParticipantsForExport() {
+  return db
+    .select({
+      name: user.name,
+      email: user.email,
+      attended: sql<number>`count(${registrations.id}) filter (where ${registrations.status} = 'active' and ${registrations.attendance} = 'attended')::int`,
+    })
+    .from(user)
+    .leftJoin(registrations, eq(registrations.userId, user.id))
+    .where(activeUserCondition())
+    .groupBy(user.id)
+    .orderBy(asc(user.name), asc(user.id));
+}
+
 export async function getParticipant(userId: string) {
   const rows = await db
     .select({ id: user.id, name: user.name, email: user.email })

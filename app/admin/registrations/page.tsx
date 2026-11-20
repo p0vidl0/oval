@@ -73,6 +73,9 @@ export default async function AdminParticipantsPage({ searchParams }: Props) {
     <main>
       <div className="nl-admin-head">
         <h1 className="nl-page-title nl-page-title--admin">Участники</h1>
+        <a href={`${BASE_PATH}/export`} className="nl-button">
+          Скачать CSV
+        </a>
       </div>
 
       <form action={BASE_PATH} className="nl-admin-search">
