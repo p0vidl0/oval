@@ -11,15 +11,17 @@ describe("participantsCsv", () => {
       { name: "  ", email: "  ", attended: 0 },
     ]);
     expect(csv.startsWith("\uFEFF")).toBe(true);
-    expect(csv.slice(1)).toBe("Имя,Email,Посещено\r\nАнна,,3\r\n,,0\r\n");
+    expect(csv.slice(1)).toBe(
+      "sep=;\r\nИмя;Email;Посещено\r\nАнна;;3\r\n;;0\r\n",
+    );
   });
 
-  it("quotes commas, quotes and line breaks", () => {
+  it("quotes semicolons, quotes and line breaks", () => {
     const csv = participantsCsv([
-      { name: 'Иванов, "Иван"\nJr', email: "a@b.c", attended: 1 },
+      { name: 'Иванов; "Иван"\nJr', email: "a@b.c", attended: 1 },
     ]);
     expect(csv.slice(1)).toBe(
-      'Имя,Email,Посещено\r\n"Иванов, ""Иван""\nJr",a@b.c,1\r\n',
+      'sep=;\r\nИмя;Email;Посещено\r\n"Иванов; ""Иван""\nJr";a@b.c;1\r\n',
     );
   });
 
@@ -27,7 +29,7 @@ describe("participantsCsv", () => {
     const csv = participantsCsv([
       { name: "=1+1", email: "a@b.c", attended: 0 },
     ]);
-    expect(csv).toContain("\r\n'=1+1,a@b.c,0\r\n");
+    expect(csv).toContain("\r\n'=1+1;a@b.c;0\r\n");
   });
 });
 
