@@ -21,6 +21,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["nodemailer"],
   experimental: {
+    agentUpgrade: "security",
     serverActions: {
       bodySizeLimit: resolveServerActionBodySizeLimit() as SizeLimit,
     },
